@@ -1,3 +1,4 @@
+import os
 import requests
 from bs4 import BeautifulSoup
 import asyncio
@@ -30,6 +31,10 @@ def download_video(video_url):
 
 # Asynchronous function to upload the video to Telegram
 async def upload_to_telegram(file_name):
+    if os.path.getsize(file_name) > 2 * 1024 * 1024 * 1024:  # Check if the file is larger than 2 GB
+        print("Video file is too large to upload.")
+        return
+    
     bot = Bot(token=TELEGRAM_TOKEN)
     with open(file_name, 'rb') as video:
         await bot.send_video(chat_id=CHAT_ID, video=video)
@@ -44,7 +49,7 @@ async def main():
         video_file = download_video(video_url)
         print("Video downloaded successfully.")
         await upload_to_telegram(video_file)
-        print("Video uploaded to Telegram successfully.")
+        print("Upload process completed.")
     else:
         print("No video URL found.")
 
