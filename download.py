@@ -1,5 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
+import asyncio
 from telegram import Bot
 
 # Telegram Bot Token and Chat ID
@@ -27,14 +28,14 @@ def download_video(video_url):
 
     return file_name
 
-# Function to upload the video to Telegram
-def upload_to_telegram(file_name):
+# Asynchronous function to upload the video to Telegram
+async def upload_to_telegram(file_name):
     bot = Bot(token=TELEGRAM_TOKEN)
     with open(file_name, 'rb') as video:
-        bot.send_video(chat_id=CHAT_ID, video=video)
+        await bot.send_video(chat_id=CHAT_ID, video=video)
 
-# Main function
-def main():
+# Main asynchronous function
+async def main():
     input_url = input("Enter the page URL: ")
     
     video_url = fetch_video_url(input_url)
@@ -42,10 +43,11 @@ def main():
         print(f"Video URL found: {video_url}")
         video_file = download_video(video_url)
         print("Video downloaded successfully.")
-        upload_to_telegram(video_file)
+        await upload_to_telegram(video_file)
         print("Video uploaded to Telegram successfully.")
     else:
         print("No video URL found.")
 
+# Entry point
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())
