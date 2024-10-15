@@ -3,6 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 import asyncio
 from telegram import Bot
+from moviepy.editor import VideoFileClip
 
 # Telegram Bot Token and Chat ID
 TELEGRAM_TOKEN = '6996568724:AAFrjf88-0uUXJumDiuV6CbVuXCJvT-4KbY'
@@ -29,6 +30,20 @@ def download_video(video_url):
 
     return file_name
 
+# Function to compress the video to a smaller size
+def compress_video(file_name):
+    compressed_file_name = 'compressed_video.mp4'
+    
+    # Load the video file
+    clip = VideoFileClip(file_name)
+    
+    # Reduce resolution and bitrate for smaller file size
+    clip_resized = clip.resize(height=360)  # Resize to 360p
+    clip_resized.write_videofile(compressed_file_name, bitrate="200k")  # Set lower bitrate
+    clip_resized.close()
+    
+    return compressed_file_name
+
 # Asynchronous function to upload the video to Telegram
 async def upload_to_telegram(file_name):
     if os.path.getsize(file_name) > 2 * 1024 * 1024 * 1024:  # Check if the file is larger than 2 GB
@@ -48,7 +63,11 @@ async def main():
         print(f"Video URL found: {video_url}")
         video_file = download_video(video_url)
         print("Video downloaded successfully.")
-        await upload_to_telegram(video_file)
+        
+        compressed_file = compress_video(video_file)
+        print("Video compressed successfully.")
+        
+        await upload_to_telegram(compressed_file)
         print("Upload process completed.")
     else:
         print("No video URL found.")
