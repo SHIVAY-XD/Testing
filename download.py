@@ -39,7 +39,7 @@ def compress_video(file_name):
     
     # Reduce resolution and bitrate for smaller file size
     clip_resized = clip.resize(height=360)  # Resize to 360p
-    clip_resized.write_videofile(compressed_file_name, bitrate="200k")  # Set lower bitrate
+    clip_resized.write_videofile(compressed_file_name, codec='libx264', bitrate="200k", audio_codec='aac')
     clip_resized.close()
     
     return compressed_file_name
