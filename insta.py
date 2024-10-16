@@ -15,7 +15,7 @@ ALLOWED_PLATFORMS = [
     'instagram.com',
     'facebook.com',
     'youtube.com',
-    'twitter.com'
+    'twitter.com', 
     'x.com'
 ]
 
