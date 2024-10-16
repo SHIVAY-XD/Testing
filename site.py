@@ -35,13 +35,18 @@ async def download_video(video_link, chat_id, context, processing_message):
         
         total_size = int(response.headers.get('content-length', 0))
         downloaded_size = 0
+        last_percent = -1  # Track last reported percent to avoid duplicates
         
         with open(filename, 'wb') as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
                 downloaded_size += len(chunk)
                 percent = (downloaded_size / total_size) * 100
-                await processing_message.edit_text(f"Download Progress: {percent:.0f}%")
+                
+                # Update message only if percent has changed
+                if int(percent) != last_percent:
+                    last_percent = int(percent)
+                    await processing_message.edit_text(f"Download Progress: {last_percent:.0f}%")
 
         if os.path.getsize(filename) > 0:
             return filename
@@ -56,16 +61,21 @@ async def compress_video(input_path, chat_id, context, processing_message):
     ]
     
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    last_percent = -1  # Track last reported percent for compression
     
     while True:
         output = process.stderr.readline()
         if output == b"" and process.poll() is not None:
             break
         if output:
-            # Here we simulate progress reporting as a placeholder
-            # You can add logic to calculate the percentage from `ffmpeg` output
-            percent = 0  # Update this with actual logic
-            await processing_message.edit_text(f"Compression Progress: {percent:.0f}%")
+            # Simulate progress reporting; adjust logic as needed
+            # Example: Read frames or duration from ffmpeg output to set percent
+            percent = 0  # Replace with actual logic to calculate progress
+            
+            # Check if the percent has changed before updating the message
+            if int(percent) != last_percent:
+                last_percent = int(percent)
+                await processing_message.edit_text(f"Compression Progress: {last_percent:.0f}%")
 
     return output_path
 
