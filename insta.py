@@ -16,6 +16,7 @@ ALLOWED_PLATFORMS = [
     'facebook.com',
     'youtube.com',
     'twitter.com'
+    'x.com'
 ]
 
 # Initialize an empty list to store user IDs
