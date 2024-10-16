@@ -19,7 +19,8 @@ ALLOWED_PLATFORMS = [
     'facebook.com',
     'youtube.com',
     'twitter.com', 
-    'x.com'
+    'x.com'.
+    'youtu.be'
 ]
 
 # Load user IDs from the JSON file
