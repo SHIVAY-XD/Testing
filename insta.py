@@ -12,22 +12,32 @@ MAX_SIZE_MB = 100  # Set your maximum size limit in MB
 
 def get_video_link(dirpy_url):
     response = requests.get(dirpy_url)
+    
+    print(f"Fetching video link from: {dirpy_url}")
+    print(f"Response status code: {response.status_code}")
+    
     if response.status_code == 200:
         soup = BeautifulSoup(response.text, 'html.parser')
         
         video_tag = soup.find('video')
         if video_tag and video_tag.source:
+            print(f"Video URL found: {video_tag.source['src']}")
             return video_tag.source['src']
         
-        # Fallback: Look for any <a> tags that might contain the video link
         for link in soup.find_all('a', href=True):
             if 'video' in link['href']:
+                print(f"Fallback video URL found: {link['href']}")
                 return link['href']
     
+    print("No video URL found.")
     return None
 
 def download_video(video_link):
     response = requests.get(video_link, stream=True)
+    
+    print(f"Attempting to download video from: {video_link}")
+    print(f"Response status code: {response.status_code}")
+    
     if response.status_code == 200:
         filename_hash = hashlib.md5(video_link.encode()).hexdigest()
         filename = f"{filename_hash}.mp4"
@@ -36,6 +46,8 @@ def download_video(video_link):
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
         return filename
+    else:
+        print(f"Failed to download video: {response.text}")  # Print response text for further insight
     return None
 
 def compress_video(input_path):
