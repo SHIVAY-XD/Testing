@@ -37,9 +37,8 @@ def download_video(video_link):
         return filename
     return None
 
-async def upload_to_telegram(chat_id, video_path):
-    async with ApplicationBuilder().token(TELEGRAM_TOKEN) as app:
-        await app.bot.send_video(chat_id=chat_id, video=open(video_path, 'rb'))
+async def upload_to_telegram(bot, chat_id, video_path):
+    await bot.send_video(chat_id=chat_id, video=open(video_path, 'rb'))
     os.remove(video_path)  # Clean up after upload
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -58,7 +57,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if video_link:
         video_path = download_video(video_link)
         if video_path:
-            await upload_to_telegram(user_id, video_path)
+            await upload_to_telegram(context.bot, user_id, video_path)
             await update.message.reply_text("Video uploaded successfully!")
         else:
             await update.message.reply_text("Failed to download the video.")
