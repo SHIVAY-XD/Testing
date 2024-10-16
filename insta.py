@@ -81,8 +81,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 video_path = compress_video(video_path)
             await upload_to_telegram(context.bot, user_id, video_path)
             total_downloads += 1  # Increment download count
-            await processing_message.delete()
-            await update.message.reply_text("Video uploaded successfully!")
+            await processing_message.delete()           
         else:
             await processing_message.delete()
             await update.message.reply_text("Failed to download the video.")
