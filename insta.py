@@ -90,35 +90,30 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Failed to retrieve video link.")
 
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.from_user.id == 6744775967:  # Replace with your admin user ID
-        successful_count = 0
-        failed_count = 0
-
-        if update.reply_to_message:
-            message_id = update.reply_to_message.message_id
-            for user_id in user_ids:
-                try:
-                    await context.bot.forward_message(chat_id=user_id, from_chat_id=update.message.chat.id, message_id=message_id)
-                    successful_count += 1
-                except Exception as e:
-                    print(f"Failed to forward message to {user_id}: {e}")
-                    failed_count += 1
-            await update.message.reply_text(f"Broadcast forwarded!\nSuccessful: {successful_count}\nFailed: {failed_count}\nTotal Users: {len(user_ids)}")
-        else:
-            message = ' '.join(context.args)
-            if not message:
-                await update.message.reply_text("Please provide a message to broadcast or reply to a message.")
-                return
-            for user_id in user_ids:
-                try:
-                    await context.bot.send_message(chat_id=user_id, text=message)
-                    successful_count += 1
-                except Exception as e:
-                    print(f"Failed to send message to {user_id}: {e}")
-                    failed_count += 1
-            await update.message.reply_text(f"Broadcast message sent!\nSuccessful: {successful_count}\nFailed: {failed_count}\nTotal Users: {len(user_ids)}")
+    # Check if the command was a reply to another message
+    if update.message.reply_to_message:
+        # Get the message to forward
+        message_to_forward = update.message.reply_to_message
+        
+        # Get the list of users to broadcast to
+        user_ids = [user_id for user_id in users]  # Assuming you maintain a list of user IDs
+        
+        successful = 0
+        failed = 0
+        
+        for user_id in user_ids:
+            try:
+                # Forward the message to each user
+                await context.bot.forward_message(chat_id=user_id, from_chat_id=message_to_forward.chat.id, message_id=message_to_forward.message_id)
+                successful += 1
+            except Exception as e:
+                print(f"Failed to forward message to {user_id}: {e}")
+                failed += 1
+        
+        total_users = len(user_ids)
+        await update.message.reply_text(f"Broadcast complete: {successful} successful, {failed} failed, out of {total_users} total users.")
     else:
-        await update.message.reply_text("You do not have permission to use this command.")
+        await update.message.reply_text("Please reply to a message to broadcast it.")
 
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     total_users = len(user_ids)
