@@ -37,16 +37,8 @@ def is_supported_platform(url):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.chat.id
     if user_id not in users:
-        users.append(user_id)  # Add user to the list
-    await update.message.reply_text(
-        f"Hello {update.message.from_user.first_name}👋!\n"
-        "I am a simple bot to download videos, reels, and photos from Instagram links.\n"
-        "This bot is the fastest bot you have ever seen in Telegram.\n"
-        "‣ Just send me your link🔗.\n"
-        "Developer: @xdshivay ❤"
-    )
-    
-    # Create inline buttons
+        users.append(user_id)  # Add user to the list        
+   # Create inline buttons
     keyboard = [
         [
             InlineKeyboardButton("Join Channel", url=f'https://t.me/itsteachteam'),
@@ -54,8 +46,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await update.message.reply_text("Welcome! Please join our channels.", reply_markup=reply_markup)
+    await update.message.reply_text(
+        f"Hello {update.message.from_user.first_name}👋!\n"
+        "I am a simple bot to download videos, reels, and photos from Instagram links.\n"
+        "This bot is the fastest bot you have ever seen in Telegram.\n"
+        "‣ Just send me your link🔗.\n"
+        "Developer: @xdshivay ❤",reply_markup=reply_markup)
+   
+#await update.message.reply_text("Welcome! Please join our channels.", reply_markup=reply_markup)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global total_downloads  # Use global variable to track downloads
