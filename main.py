@@ -128,7 +128,7 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Please reply to a message to broadcast it.")
 
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    total_users = len(USER_DATA_FILE)
+    total_users = len(users)
     await update.message.reply_text(f"Total Users: {total_users}\nTotal Downloads: {total_downloads}")
 
 async def get_video_link(dirpy_url):
