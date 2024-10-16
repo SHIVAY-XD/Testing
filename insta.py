@@ -46,8 +46,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Create inline buttons
     keyboard = [
         [
-            InlineKeyboardButton("Channel", url=f'https://t.me/itsteachteam'),
-            InlineKeyboardButton("Group", url=f'https://t.me/itsteachteamsupport')
+            InlineKeyboardButton("Join Channel", url=f'https://t.me/itsteachteam'),
+            InlineKeyboardButton("Join Group", url=f'https://t.me/itsteachteamsupport')
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -90,7 +90,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Failed to retrieve video link.")
 
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.from_user.id == YOUR_ADMIN_USER_ID:  # Replace with your admin user ID
+    if update.message.from_user.id == 6744775967:  # Replace with your admin user ID
         successful_count = 0
         failed_count = 0
 
@@ -170,7 +170,17 @@ async def upload_to_telegram(bot, chat_id, video_path):
     try:
         with open(video_path, 'rb') as video_file:
             message = await bot.send_video(chat_id=chat_id, video=video_file)
-            await bot.send_message(chat_id=chat_id, text="Your video has been uploaded successfully!")
+
+            # Create inline buttons for the channel and bot
+            buttons = [
+                [
+                    InlineKeyboardButton("Channel", url=f'https://t.me/itsteachteam'),
+                    InlineKeyboardButton("Bot", url=f'https://t.me/{bot.username}')  # Replace with your bot's username
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(buttons)
+            await bot.edit_message_reply_markup(chat_id=chat_id, message_id=message.message_id, reply_markup=reply_markup)
+
         os.remove(video_path)  # Delete video from server after sending
     except Exception as e:
         print(f"Error during video upload: {e}")
