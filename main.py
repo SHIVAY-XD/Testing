@@ -19,7 +19,7 @@ ALLOWED_PLATFORMS = [
     'facebook.com',
     'youtube.com',
     'twitter.com', 
-    'x.com'.
+    'x.com', 
     'youtu.be'
 ]
 
