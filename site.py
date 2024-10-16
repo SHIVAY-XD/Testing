@@ -66,21 +66,33 @@ async def compress_video(input_path, chat_id, context, processing_message):
         '-preset', 'superfast', '-threads', '4', output_path
     ]
     
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    last_percent = -1  # Track last reported percent for compression
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     
     while True:
         output = process.stderr.readline()
-        if output == b"" and process.poll() is not None:
+        if output == "" and process.poll() is not None:
             break
         if output:
-            # Simulate progress reporting; replace with logic to calculate actual progress
-            percent = 0  # Placeholder for actual progress
-            
-            # Check if the percent has changed before updating the message
-            if int(percent) != last_percent:
-                last_percent = int(percent)
-                await processing_message.edit_text(f"Compression Progress: {last_percent:.0f}%")
+            # Parse the output to find the progress
+            if "frame=" in output and "fps=" in output:
+                # Extracting the percentage from the output
+                if "time=" in output:
+                    time_index = output.index("time=") + len("time=")
+                    time_str = output[time_index:time_index + 11].strip()  # HH:MM:SS.ms
+                    # Here we can add code to convert time_str to a percentage if needed
+                    # For now, just simulate progress
+                    percent = 0  # Placeholder for actual progress calculation
+                    
+                    # Example logic to extract percent (you will need to adjust based on your needs)
+                    # This is just a placeholder; actual implementation should calculate the progress based on the total duration
+                    if "size=" in output:
+                        size_index = output.index("size=") + len("size=")
+                        size_str = output[size_index:].split()[0].strip()  # Get the size
+                        percent = min(100, int(size_str) / (total_size) * 100)  # Example calculation
+                        
+                    if percent != 0 and int(percent) != last_percent:
+                        last_percent = int(percent)
+                        await processing_message.edit_text(f"Compression Progress: {last_percent:.0f}%")
 
     # Final message update for compression completion
     await processing_message.edit_text("Compression complete!")
