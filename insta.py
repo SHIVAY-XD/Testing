@@ -18,7 +18,8 @@ ALLOWED_PLATFORMS = [
     'twitter.com'
 ]
 
-user_ids = set()  # Set to store user IDs for broadcasting
+# Initialize an empty list to store user IDs
+users = []
 total_downloads = 0  # Counter for total video downloads
 
 async def is_user_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -33,13 +34,14 @@ def is_supported_platform(url):
     return any(platform in url for platform in ALLOWED_PLATFORMS)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_name = update.message.from_user.first_name
-    user_ids.add(update.message.chat.id)  # Add user ID to the set
-    greeting_message = (
-        f"Hello {user_name}👋!\n\n"
+    user_id = update.message.chat.id
+    if user_id not in users:
+        users.append(user_id)  # Add user to the list
+    await update.message.reply_text(
+        f"Hello {update.message.from_user.first_name}👋!\n"
         "I am a simple bot to download videos, reels, and photos from Instagram links.\n"
-        "This bot is the fastest bot you have ever seen in Telegram.\n\n"
-        "‣ Just send me your link🔗.\n\n"
+        "This bot is the fastest bot you have ever seen in Telegram.\n"
+        "‣ Just send me your link🔗.\n"
         "Developer: @xdshivay ❤"
     )
     
@@ -92,18 +94,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Check if the command was a reply to another message
     if update.message.reply_to_message:
-        # Get the message to forward
         message_to_forward = update.message.reply_to_message
         
         # Get the list of users to broadcast to
-        user_ids = [user_id for user_id in users]  # Assuming you maintain a list of user IDs
+        user_ids = users  # Now this references the initialized users list
         
         successful = 0
         failed = 0
         
         for user_id in user_ids:
             try:
-                # Forward the message to each user
                 await context.bot.forward_message(chat_id=user_id, from_chat_id=message_to_forward.chat.id, message_id=message_to_forward.message_id)
                 successful += 1
             except Exception as e:
