@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 import os
 import hashlib
 import subprocess
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
 # Replace with your actual Telegram bot token and channel username
@@ -19,8 +19,8 @@ ALLOWED_PLATFORMS = [
 ]
 
 user_ids = set()  # Set to store user IDs for broadcasting
+total_downloads = 0  # Counter for total video downloads
 
-# Function to check if the user is a member of the channel
 async def is_user_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.chat.id
     try:
@@ -29,26 +29,42 @@ async def is_user_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception:
         return False
 
-# Function to check if the URL is from an allowed platform
 def is_supported_platform(url):
     return any(platform in url for platform in ALLOWED_PLATFORMS)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_name = update.message.from_user.first_name
     user_ids.add(update.message.chat.id)  # Add user ID to the set
-    await update.message.reply_text("Send me a video link from Instagram, Facebook, YouTube, or Twitter!")
+    greeting_message = (
+        f"Hello {user_name}👋!\n\n"
+        "I am a simple bot to download videos, reels, and photos from Instagram links.\n"
+        "This bot is the fastest bot you have ever seen in Telegram.\n\n"
+        "‣ Just send me your link🔗.\n\n"
+        "Developer: @xdshivay ❤"
+    )
+    
+    # Create inline buttons
+    keyboard = [
+        [
+            InlineKeyboardButton("Channel", url=f'https://t.me/itsteachteam'),
+            InlineKeyboardButton("Group", url=f'https://t.me/itsteachteamsupport')
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(greeting_message, reply_markup=reply_markup)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global total_downloads  # Use global variable to track downloads
     user_id = update.message.chat.id
     user_url = update.message.text
 
-    # Check if the user is a member of the channel
     if not await is_user_member(update, context):
         await update.message.reply_text(
             f"Please join our channel {CHANNEL_USERNAME} to use this bot."
         )
         return
 
-    # Check if the link is from a supported platform
     if not is_supported_platform(user_url):
         await update.message.reply_text("Unsupported platform. Please provide a link from Instagram, Facebook, YouTube, or Twitter.")
         return
@@ -61,8 +77,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         video_path = download_video(video_link)
         if video_path:
             if get_file_size(video_path) > MAX_SIZE_MB:
-                video_path = compress_video(video_path)  # Compress the video if it's too large
+                video_path = compress_video(video_path)
             await upload_to_telegram(context.bot, user_id, video_path)
+            total_downloads += 1  # Increment download count
             await processing_message.delete()
             await update.message.reply_text("Video uploaded successfully!")
         else:
@@ -73,18 +90,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Failed to retrieve video link.")
 
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.from_user.id == 6744775967:  # Replace with your admin user ID
+    if update.message.from_user.id == YOUR_ADMIN_USER_ID:  # Replace with your admin user ID
+        successful_count = 0
+        failed_count = 0
+
         if update.reply_to_message:
-            # Forward a message
             message_id = update.reply_to_message.message_id
             for user_id in user_ids:
                 try:
                     await context.bot.forward_message(chat_id=user_id, from_chat_id=update.message.chat.id, message_id=message_id)
+                    successful_count += 1
                 except Exception as e:
                     print(f"Failed to forward message to {user_id}: {e}")
-            await update.message.reply_text("Broadcast forwarded!")
+                    failed_count += 1
+            await update.message.reply_text(f"Broadcast forwarded!\nSuccessful: {successful_count}\nFailed: {failed_count}\nTotal Users: {len(user_ids)}")
         else:
-            # Send a normal broadcast message
             message = ' '.join(context.args)
             if not message:
                 await update.message.reply_text("Please provide a message to broadcast or reply to a message.")
@@ -92,11 +112,17 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
             for user_id in user_ids:
                 try:
                     await context.bot.send_message(chat_id=user_id, text=message)
+                    successful_count += 1
                 except Exception as e:
                     print(f"Failed to send message to {user_id}: {e}")
-            await update.message.reply_text("Broadcast message sent!")
+                    failed_count += 1
+            await update.message.reply_text(f"Broadcast message sent!\nSuccessful: {successful_count}\nFailed: {failed_count}\nTotal Users: {len(user_ids)}")
     else:
         await update.message.reply_text("You do not have permission to use this command.")
+
+async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    total_users = len(user_ids)
+    await update.message.reply_text(f"Total Users: {total_users}\nTotal Downloads: {total_downloads}")
 
 def get_video_link(dirpy_url):
     response = requests.get(dirpy_url)
@@ -154,6 +180,7 @@ def main():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("stats", stats))  # Command to check stats
     app.add_handler(CommandHandler("broadcast", broadcast))  # Combined broadcast command
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
