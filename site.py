@@ -26,30 +26,48 @@ def get_video_link(dirpy_url):
     
     return None
 
-def download_video(video_link):
+def download_video(video_link, chat_id, context):
     response = requests.get(video_link, stream=True)
     
     if response.status_code == 200:
         filename_hash = hashlib.md5(video_link.encode()).hexdigest()
         filename = f"{filename_hash}.mp4"
-
+        
+        total_size = int(response.headers.get('content-length', 0))
+        downloaded_size = 0
+        
         with open(filename, 'wb') as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
+                downloaded_size += len(chunk)
+                percent = (downloaded_size / total_size) * 100
+                asyncio.run(context.bot.send_message(chat_id=chat_id, text=f"Download Progress: {percent:.0f}%"))
 
         if os.path.getsize(filename) > 0:
             return filename
     return None
 
-def compress_video(input_path):
+def compress_video(input_path, chat_id, context):
     output_path = f"compressed_{os.path.basename(input_path)}"
+    
     command = [
-        'ffmpeg', '-i', input_path, '-vcodec', 'libx264', '-crf', '30',  # Adjust CRF as needed
-        '-preset', 'superfast',  # Change to ultrafast for faster compression
-        '-threads', '4',  # Use 4 threads; adjust based on your CPU
-        output_path
+        'ffmpeg', '-i', input_path, '-vcodec', 'libx264', '-crf', '30',
+        '-preset', 'superfast', '-threads', '4', output_path
     ]
-    subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    
+    while True:
+        output = process.stderr.readline()
+        if output == b"" and process.poll() is not None:
+            break
+        if output:
+            # Parse ffmpeg output for progress (if available)
+            if b"frame=" in output:
+                # Extract frame count or other relevant information
+                percent = 0  # Set your logic here to calculate percentage based on output
+                asyncio.run(context.bot.send_message(chat_id=chat_id, text=f"Compression Progress: {percent:.0f}%"))
+
     return output_path
 
 def get_file_size(file_path):
@@ -82,10 +100,10 @@ async def process_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     video_link = get_video_link(dirpy_url)
     if video_link:
-        video_path = download_video(video_link)
+        video_path = download_video(video_link, user_id, context)
         if video_path:
             if get_file_size(video_path) > MAX_SIZE_MB:
-                video_path = compress_video(video_path)  # Compress the video if it's too large
+                video_path = compress_video(video_path, user_id, context)  # Compress the video if it's too large
             await upload_to_telegram(context.bot, user_id, video_path)
             await processing_message.delete()
             await update.message.reply_text("Video uploaded successfully!")
