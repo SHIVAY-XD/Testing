@@ -7,7 +7,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
 # Replace with your actual Telegram bot token and channel username
-TELEGRAM_TOKEN = '7744770326:AAE9OtBsE0QyzPURjV4bt6gU4H6CBn9mvFc'
+TELEGRAM_TOKEN = '7744770326:AAE9OtBsE0QyzPURjV4bt6gU4H6CBn9mvFc'  # Replace with your bot token
 CHANNEL_USERNAME = '@itsteachteam'  # Replace with your channel username
 MAX_SIZE_MB = 100  # Set your maximum size limit in MB
 
@@ -21,6 +21,7 @@ ALLOWED_PLATFORMS = [
 # Initialize an empty list to store user IDs
 users = []
 total_downloads = 0  # Counter for total video downloads
+ADMIN_ID = 6744775967  # Replace with your actual Telegram user ID
 
 async def is_user_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.chat.id
@@ -54,7 +55,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await update.message.reply_text(greeting_message, reply_markup=reply_markup)
+    await update.message.reply_text("Welcome! Please join our channels.", reply_markup=reply_markup)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global total_downloads  # Use global variable to track downloads
@@ -92,12 +93,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Failed to retrieve video link.")
 
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Check if the user is the admin
+    if update.message.chat.id != ADMIN_ID:
+        await update.message.reply_text("You are not authorized to use this command.")
+        return
+
     # Check if the command was a reply to another message
     if update.message.reply_to_message:
         message_to_forward = update.message.reply_to_message
         
         # Get the list of users to broadcast to
-        user_ids = users  # Now this references the initialized users list
+        user_ids = users
         
         successful = 0
         failed = 0
@@ -116,7 +122,7 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Please reply to a message to broadcast it.")
 
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    total_users = len(user_ids)
+    total_users = len(users)
     await update.message.reply_text(f"Total Users: {total_users}\nTotal Downloads: {total_downloads}")
 
 def get_video_link(dirpy_url):
