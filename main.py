@@ -63,10 +63,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        f"Hello {update.message.from_user.first_name}!\n\n"
-        "I am a simple bot to download videos, reels, and photos from Instagram links.\n\n"
-        "Just send me your link.",
-        reply_markup=reply_markup
+        f"Hello {user_first_name} 👋!\n\n"
+        "<b>I am a simple bot to download videos, reels, and photos from Instagram links.</b>\n\n"
+        "<i>This bot is the fastest bot you have ever seen in Telegram.</i>\n\n"
+        "<b>‣ Just send me your link🔗.</b>\n\n"
+        "<b>Developer: @xdshivay</b> ❤", 
+        reply_markup=reply_markup, parse_mode='HTML'
     )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
