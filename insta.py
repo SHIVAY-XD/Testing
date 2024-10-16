@@ -41,16 +41,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
    # Create inline buttons
     keyboard = [
         [
-            InlineKeyboardButton("Join Channel", url=f'https://t.me/itsteachteam'),
-            InlineKeyboardButton("Join Group", url=f'https://t.me/itsteachteamsupport')
+            InlineKeyboardButton("Channel", url=f'https://t.me/itsteachteam'),
+            InlineKeyboardButton("Group", url=f'https://t.me/itsteachteamsupport')
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        f"Hello {update.message.from_user.first_name}👋!\n"
-        "I am a simple bot to download videos, reels, and photos from Instagram links.\n"
-        "This bot is the fastest bot you have ever seen in Telegram.\n"
-        "‣ Just send me your link🔗.\n"
+        f"Hello {update.message.from_user.first_name}👋!\n\n"
+        "I am a simple bot to download videos, reels, and photos from Instagram links.\n\n"
+        "This bot is the fastest bot you have ever seen in Telegram.\n\n"
+        "‣ Just send me your link🔗.\n\n"
         "Developer: @xdshivay ❤",reply_markup=reply_markup)
    
 #await update.message.reply_text("Welcome! Please join our channels.", reply_markup=reply_markup)
