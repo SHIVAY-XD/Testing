@@ -114,7 +114,7 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 failed += 1
         
         total_users = len(user_ids)
-        await update.message.reply_text(f"Broadcast complete: \n\nsuccesfully:{successful}, \n\n Failed: {failed} ,\n\nTotal users: {total_users}")
+        await update.message.reply_text(f"Broadcast complete: \n\nsuccesfully:{successful}\n\nFailed:{failed}\n\nTotal users:{total_users}")
     else:
         await update.message.reply_text("Please reply to a message to broadcast it.")
 
