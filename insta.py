@@ -54,7 +54,7 @@ def download_video(video_link):
             else:
                 print("Error: Video file was not created.")
         else:
-            print(f"Failed to download video: {response.text}")  # Print response text for further insight
+            print(f"Failed to download video: {response.text}")
     except Exception as e:
         print(f"An error occurred during the download: {e}")
     
@@ -73,20 +73,25 @@ def get_file_size(file_path):
     return os.path.getsize(file_path) / (1024 * 1024)  # Convert bytes to MB
 
 async def upload_to_telegram(bot, chat_id, video_path):
-    video_file = open(video_path, 'rb')
-    message = await bot.send_video(chat_id=chat_id, video=video_file)
+    try:
+        print(f"Uploading video: {video_path}")
+        with open(video_path, 'rb') as video_file:
+            message = await bot.send_video(chat_id=chat_id, video=video_file)
 
-    buttons = [
-        [
-            InlineKeyboardButton("Download Video", callback_data='download'),
-            InlineKeyboardButton("Visit Channel", url='https://t.me/YourChannel')  # Replace with your channel link
-        ]
-    ]
-    reply_markup = InlineKeyboardMarkup(buttons)
-    await bot.edit_message_reply_markup(chat_id=chat_id, message_id=message.message_id, reply_markup=reply_markup)
+            buttons = [
+                [
+                    InlineKeyboardButton("Download Video", callback_data='download'),
+                    InlineKeyboardButton("Visit Channel", url='https://t.me/YourChannel')  # Replace with your channel link
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(buttons)
+            await bot.edit_message_reply_markup(chat_id=chat_id, message_id=message.message_id, reply_markup=reply_markup)
 
-    video_file.close()
-    os.remove(video_path)  # Delete video from server
+        os.remove(video_path)  # Delete video from server after sending
+        print("Video uploaded and deleted from server.")
+    except Exception as e:
+        print(f"Error during video upload: {e}")
+        await bot.send_message(chat_id=chat_id, text="Failed to upload the video.")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Send me a video link from Instagram or other platforms!")
