@@ -26,7 +26,7 @@ def get_video_link(dirpy_url):
     
     return None
 
-async def download_video(video_link, chat_id, context):
+async def download_video(video_link, chat_id, context, processing_message):
     response = requests.get(video_link, stream=True)
     
     if response.status_code == 200:
@@ -41,13 +41,13 @@ async def download_video(video_link, chat_id, context):
                 f.write(chunk)
                 downloaded_size += len(chunk)
                 percent = (downloaded_size / total_size) * 100
-                await context.bot.send_message(chat_id=chat_id, text=f"Download Progress: {percent:.0f}%")
+                await processing_message.edit_text(f"Download Progress: {percent:.0f}%")
 
         if os.path.getsize(filename) > 0:
             return filename
     return None
 
-async def compress_video(input_path, chat_id, context):
+async def compress_video(input_path, chat_id, context, processing_message):
     output_path = f"compressed_{os.path.basename(input_path)}"
     
     command = [
@@ -62,11 +62,10 @@ async def compress_video(input_path, chat_id, context):
         if output == b"" and process.poll() is not None:
             break
         if output:
-            # Parse ffmpeg output for progress (this part may need to be customized)
             # Here we simulate progress reporting as a placeholder
-            if b"frame=" in output:
-                percent = 0  # Set your logic here to calculate percentage based on output
-                await context.bot.send_message(chat_id=chat_id, text=f"Compression Progress: {percent:.0f}%")
+            # You can add logic to calculate the percentage from `ffmpeg` output
+            percent = 0  # Update this with actual logic
+            await processing_message.edit_text(f"Compression Progress: {percent:.0f}%")
 
     return output_path
 
@@ -97,10 +96,10 @@ async def process_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     video_link = get_video_link(dirpy_url)
     if video_link:
-        video_path = await download_video(video_link, user_id, context)
+        video_path = await download_video(video_link, user_id, context, processing_message)
         if video_path:
             if get_file_size(video_path) > MAX_SIZE_MB:
-                video_path = await compress_video(video_path, user_id, context)  # Compress the video if it's too large
+                video_path = await compress_video(video_path, user_id, context, processing_message)  # Compress the video if it's too large
             await upload_to_telegram(context.bot, user_id, video_path)
             await processing_message.delete()
             await update.message.reply_text("Video uploaded successfully!")
