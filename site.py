@@ -26,6 +26,9 @@ def get_video_link(dirpy_url):
     
     return None
 
+def get_file_size(file_path):
+    return os.path.getsize(file_path) / (1024 * 1024)  # Convert bytes to MB
+
 async def download_video(video_link, chat_id, context, processing_message):
     response = requests.get(video_link, stream=True)
     
@@ -48,6 +51,9 @@ async def download_video(video_link, chat_id, context, processing_message):
                     last_percent = int(percent)
                     await processing_message.edit_text(f"Download Progress: {last_percent:.0f}%")
 
+        # Final message update for completion
+        await processing_message.edit_text("Download complete!")
+        
         if os.path.getsize(filename) > 0:
             return filename
     return None
@@ -68,15 +74,17 @@ async def compress_video(input_path, chat_id, context, processing_message):
         if output == b"" and process.poll() is not None:
             break
         if output:
-            # Simulate progress reporting; adjust logic as needed
-            # Example: Read frames or duration from ffmpeg output to set percent
-            percent = 0  # Replace with actual logic to calculate progress
+            # Simulate progress reporting; replace with logic to calculate actual progress
+            percent = 0  # Placeholder for actual progress
             
             # Check if the percent has changed before updating the message
             if int(percent) != last_percent:
                 last_percent = int(percent)
                 await processing_message.edit_text(f"Compression Progress: {last_percent:.0f}%")
 
+    # Final message update for compression completion
+    await processing_message.edit_text("Compression complete!")
+    
     return output_path
 
 async def upload_to_telegram(bot, chat_id, video_path):
@@ -94,8 +102,10 @@ async def upload_to_telegram(bot, chat_id, video_path):
             await bot.edit_message_reply_markup(chat_id=chat_id, message_id=message.message_id, reply_markup=reply_markup)
 
         os.remove(video_path)  # Delete video from server after sending
+        print("Video uploaded and deleted from server.")
     except Exception as e:
         await bot.send_message(chat_id=chat_id, text="Failed to upload the video.")
+        print(f"Error during upload: {e}")
 
 async def process_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.chat.id
@@ -110,9 +120,15 @@ async def process_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if video_path:
             if get_file_size(video_path) > MAX_SIZE_MB:
                 video_path = await compress_video(video_path, user_id, context, processing_message)  # Compress the video if it's too large
-            await upload_to_telegram(context.bot, user_id, video_path)
-            await processing_message.delete()
-            await update.message.reply_text("Video uploaded successfully!")
+            
+            # Check if video_path is valid before upload
+            if video_path and os.path.exists(video_path):
+                await upload_to_telegram(context.bot, user_id, video_path)
+                await processing_message.delete()
+                await update.message.reply_text("Video uploaded successfully!")
+            else:
+                await processing_message.delete()
+                await update.message.reply_text("Failed to prepare the video for upload.")
         else:
             await processing_message.delete()
             await update.message.reply_text("Failed to download the video.")
