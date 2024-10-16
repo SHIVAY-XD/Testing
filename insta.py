@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import os
+import hashlib
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
@@ -12,7 +13,6 @@ def get_video_link(dirpy_url):
     if response.status_code == 200:
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Look for the video source
         video_tag = soup.find('video')
         if video_tag and video_tag.source:
             return video_tag.source['src']
@@ -27,7 +27,10 @@ def get_video_link(dirpy_url):
 def download_video(video_link):
     response = requests.get(video_link, stream=True)
     if response.status_code == 200:
-        filename = video_link.split("/")[-1]
+        # Create a hash of the video link for the filename
+        filename_hash = hashlib.md5(video_link.encode()).hexdigest()
+        filename = f"{filename_hash}.mp4"  # Use .mp4 as the file extension
+
         with open(filename, 'wb') as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
