@@ -33,21 +33,31 @@ def get_video_link(dirpy_url):
     return None
 
 def download_video(video_link):
-    response = requests.get(video_link, stream=True)
-    
-    print(f"Attempting to download video from: {video_link}")
-    print(f"Response status code: {response.status_code}")
-    
-    if response.status_code == 200:
-        filename_hash = hashlib.md5(video_link.encode()).hexdigest()
-        filename = f"{filename_hash}.mp4"
+    try:
+        response = requests.get(video_link, stream=True)
+        
+        print(f"Attempting to download video from: {video_link}")
+        print(f"Response status code: {response.status_code}")
+        
+        if response.status_code == 200:
+            filename_hash = hashlib.md5(video_link.encode()).hexdigest()
+            filename = f"{filename_hash}.mp4"
 
-        with open(filename, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-        return filename
-    else:
-        print(f"Failed to download video: {response.text}")  # Print response text for further insight
+            with open(filename, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
+            # Check if the file was created
+            if os.path.exists(filename) and os.path.getsize(filename) > 0:
+                print(f"Downloaded video saved as: {filename}")
+                return filename
+            else:
+                print("Error: Video file was not created.")
+        else:
+            print(f"Failed to download video: {response.text}")  # Print response text for further insight
+    except Exception as e:
+        print(f"An error occurred during the download: {e}")
+    
     return None
 
 def compress_video(input_path):
