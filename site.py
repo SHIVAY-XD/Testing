@@ -6,6 +6,8 @@ from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 # Replace with your actual bot token and channel usernames
 TELEGRAM_BOT_TOKEN = '6996568724:AAFrjf88-0uUXJumDiuV6CbVuXCJvT-4KbY'  # Use an environment variable for the bot token
+API_ID = 12834603  # Your API ID
+API_HASH = '84a5daf7ac334a70b3fbd180616a76c6'  # Your API hash
 CHANNEL_USERNAME = '@itsteachteam'  # Your channel username to check membership
 USER_DETAILS_CHANNEL = '@userdatass'  # Channel to store user details
 ADMIN_USER_IDS = [6744775967]  # List of admin user IDs
@@ -24,7 +26,7 @@ def save_user_details():
         json.dump(user_details, file, indent=4)
 
 # Pyrogram client
-app = Client("my_bot", bot_token=TELEGRAM_BOT_TOKEN)
+app = Client("my_bot", bot_token=TELEGRAM_BOT_TOKEN, api_id=API_ID, api_hash=API_HASH)
 
 @app.on_message(filters.command("start"))
 async def start(client, message):
