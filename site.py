@@ -5,7 +5,7 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 # Replace with your actual bot token and channel usernames
-TELEGRAM_BOT_TOKEN = '6996568724:AAFrjf88-0uUXJumDiuV6CbVuXCJvT-4KbY'  # Your bot token
+TELEGRAM_BOT_TOKEN = '6996568724:AAFrjf88-0uUXJumDiuV6CbVuXCJvT-4KbY'  # Use an environment variable for the bot token
 CHANNEL_USERNAME = '@itsteachteam'  # Your channel username to check membership
 USER_DETAILS_CHANNEL = '@userdatass'  # Channel to store user details
 ADMIN_USER_IDS = [6744775967]  # List of admin user IDs
@@ -110,7 +110,6 @@ async def download_and_send_video(video_url, chat_id, user_id):
                 response.raise_for_status()
                 content = await response.json()
 
-        platform = content.get('platform')
         video_link = content['data'].get('video')
         title = content['data'].get('title', "Video")  # Default title
 
@@ -118,13 +117,11 @@ async def download_and_send_video(video_url, chat_id, user_id):
             await app.send_message(chat_id, "Received an invalid video link.")
             return
 
-        # Download video
         async with aiohttp.ClientSession() as session:
             async with session.get(video_link) as response:
                 response.raise_for_status()
                 video_data = await response.read()
 
-        # Send the video file
         await app.send_video(chat_id, video_data, caption=title)
 
     except Exception as e:
@@ -133,7 +130,7 @@ async def download_and_send_video(video_url, chat_id, user_id):
     finally:
         await app.delete_messages(chat_id, downloading_message.message_id)
 
-@app.on_message(filters.text & ~filters.command)
+@app.on_message(filters.text & ~filters.command())
 async def handle_message(client, message):
     video_link = message.text
     await download_and_send_video(video_link, message.chat.id, message.from_user.id)
