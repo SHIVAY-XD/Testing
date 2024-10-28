@@ -67,7 +67,7 @@ async def start(client, message):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await message.reply_text(welcome_message, parse_mode='Markdown', reply_markup=reply_markup)
+    await message.reply_text(welcome_message, parse_mode='MarkdownV2', reply_markup=reply_markup)
 
 @app.on_message(filters.command("info"))
 async def info(client, message):
@@ -94,7 +94,7 @@ async def download_and_send_video(video_url, chat_id, user_id):
         reply_markup = InlineKeyboardMarkup(keyboard)
         await app.send_message(chat_id, 
                                "*Before sending the link, please join our channel first.*\n\n*After joining, send the link again.*",
-                               parse_mode='Markdown', reply_markup=reply_markup)
+                               parse_mode='MarkdownV2', reply_markup=reply_markup)
         return
 
     downloading_message = await app.send_message(chat_id, "Processing your request... Please wait.")
