@@ -131,7 +131,7 @@ async def download_and_send_video(video_url, chat_id, user_id):
     finally:
         await app.delete_messages(chat_id, downloading_message.message_id)
 
-@app.on_message(filters.text & ~filters.command())
+@app.on_message(filters.text & ~filters.command(['start', 'info', 'broadcast']))
 async def handle_message(client, message):
     video_link = message.text
     await download_and_send_video(video_link, message.chat.id, message.from_user.id)
