@@ -84,7 +84,7 @@ async def check_channel_membership(user_id):
         ]
     except Exception as e:
         print(f"Error checking membership for user {user_id}: {e}")
-        return True if e.__class__.__name__ == 'BadRequest' else False
+        return True  # Assume they are a member if we can't verify
 
 async def download_and_send_video(video_url, chat_id, user_id):
     if not await check_channel_membership(user_id):
