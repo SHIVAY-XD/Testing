@@ -4,7 +4,6 @@ import aiohttp
 from pyrogram import Client, filters, enums
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-# Replace with your actual values
 TELEGRAM_BOT_TOKEN = '6996568724:AAFrjf88-0uUXJumDiuV6CbVuXCJvT-4KbY'
 API_ID = 123456  # Your API ID
 API_HASH = '84a5daf7ac334a70b3fbd180616a76c6'  # Your API Hash
@@ -24,7 +23,7 @@ def save_user_details():
     with open(USER_DATA_FILE, "w") as file:
         json.dump(user_details, file, indent=4)
 
-app = Client("my_bot", bot_token=TELEGRAM_BOT_TOKEN, api_id=API_ID, api_hash=API_HASH)
+app = Client("my_bot_session", bot_token=TELEGRAM_BOT_TOKEN, api_id=API_ID, api_hash=API_HASH)
 
 @app.on_message(filters.command("start"))
 async def start(client, message):
@@ -76,7 +75,7 @@ async def info(client, message):
 
 async def check_channel_membership(user_id):
     if user_id in ADMIN_USER_IDS:
-        return True  # Allow admins to bypass membership check
+        return True
     try:
         member = await app.get_chat_member(CHANNEL_USERNAME, user_id)
         return member.status in [
@@ -86,7 +85,7 @@ async def check_channel_membership(user_id):
         ]
     except Exception as e:
         print(f"Error checking membership for user {user_id}: {e}")
-        return False  # Deny access on error
+        return False
 
 async def download_and_send_video(video_url, chat_id, user_id):
     if not await check_channel_membership(user_id):
@@ -133,7 +132,7 @@ async def download_and_send_video(video_url, chat_id, user_id):
         await app.send_message(chat_id, "Failed to download video. Please try again later.")
         print(f"Error: {e}")
     finally:
-        await app.delete_messages(chat_id, downloading_message.id)  # Use 'id' instead of 'message_id'
+        await app.delete_messages(chat_id, downloading_message.id)
 
 @app.on_message(filters.text & ~filters.command(['start', 'info', 'broadcast']))
 async def handle_message(client, message):
