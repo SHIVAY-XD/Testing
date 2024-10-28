@@ -75,6 +75,8 @@ async def info(client, message):
     await message.reply_text(f"Total users in the bot: {total_users}")
 
 async def check_channel_membership(user_id):
+    if user_id in ADMIN_USER_IDS:
+        return True  # Allow admins to bypass membership check
     try:
         member = await app.get_chat_member(CHANNEL_USERNAME, user_id)
         return member.status in [
@@ -84,7 +86,7 @@ async def check_channel_membership(user_id):
         ]
     except Exception as e:
         print(f"Error checking membership for user {user_id}: {e}")
-        return True  # Assume they are a member if we can't verify
+        return False  # Deny access on error
 
 async def download_and_send_video(video_url, chat_id, user_id):
     if not await check_channel_membership(user_id):
@@ -131,7 +133,7 @@ async def download_and_send_video(video_url, chat_id, user_id):
         await app.send_message(chat_id, "Failed to download video. Please try again later.")
         print(f"Error: {e}")
     finally:
-        await app.delete_messages(chat_id, downloading_message.message_id)
+        await app.delete_messages(chat_id, downloading_message.id)  # Use 'id' instead of 'message_id'
 
 @app.on_message(filters.text & ~filters.command(['start', 'info', 'broadcast']))
 async def handle_message(client, message):
