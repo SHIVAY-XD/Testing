@@ -87,9 +87,7 @@ async def check_channel_membership(user_id):
 async def download_and_send_video(video_url, chat_id, user_id):
     if not await check_channel_membership(user_id):
         keyboard = [
-            [
-                InlineKeyboardButton("Join Channel", url="https://t.me/Itsteachteam"),
-            ]
+            [InlineKeyboardButton("Join Channel", url="https://t.me/Itsteachteam")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await app.send_message(chat_id, 
@@ -111,7 +109,7 @@ async def download_and_send_video(video_url, chat_id, user_id):
                 content = await response.json()
 
         video_link = content['data'].get('video')
-        title = content['data'].get('title', "Video")  # Default title
+        title = content['data'].get('title', "Video")
 
         if not video_link or not video_link.startswith("http"):
             await app.send_message(chat_id, "Received an invalid video link.")
@@ -124,6 +122,9 @@ async def download_and_send_video(video_url, chat_id, user_id):
 
         await app.send_video(chat_id, video_data, caption=title)
 
+    except aiohttp.ClientError as e:
+        await app.send_message(chat_id, "Network error occurred. Please try again later.")
+        print(f"Network error: {e}")
     except Exception as e:
         await app.send_message(chat_id, "Failed to download video. Please try again later.")
         print(f"Error: {e}")
