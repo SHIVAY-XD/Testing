@@ -1,134 +1,167 @@
-import requests
-from bs4 import BeautifulSoup
 import os
-import hashlib
-import subprocess
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+import json
+import aiohttp
+from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-# Replace with your actual Telegram bot token
-TELEGRAM_TOKEN = '7744770326:AAE9OtBsE0QyzPURjV4bt6gU4H6CBn9mvFc'
-MAX_SIZE_MB = 50  # Maximum size limit in MB
+# Replace with your actual bot token and channel usernames
+TELEGRAM_BOT_TOKEN = '6996568724:AAFrjf88-0uUXJumDiuV6CbVuXCJvT-4KbY'  # Your bot token
+CHANNEL_USERNAME = '@itsteachteam'  # Your channel username to check membership
+USER_DETAILS_CHANNEL = '@userdatass'  # Channel to store user details
+ADMIN_USER_IDS = [6744775967]  # List of admin user IDs
+USER_DATA_FILE = "user_details.json"  # File to store user details
 
-def get_video_link(dirpy_url):
-    response = requests.get(dirpy_url)
+# Load user details from a JSON file
+try:
+    with open(USER_DATA_FILE, "r") as file:
+        user_details = json.load(file)
+except FileNotFoundError:
+    user_details = []  # If no file exists, initialize an empty list
+
+# Function to save user details to a JSON file
+def save_user_details():
+    with open(USER_DATA_FILE, "w") as file:
+        json.dump(user_details, file, indent=4)
+
+# Pyrogram client
+app = Client("my_bot", bot_token=TELEGRAM_BOT_TOKEN)
+
+@app.on_message(filters.command("start"))
+async def start(client, message):
+    user_id = message.from_user.id
+    user_first_name = message.from_user.first_name
+    user_name = message.from_user.username
+
+    # Store user details if not already present
+    if not any(user['id'] == user_id for user in user_details):
+        user_info = {
+            "id": user_id,
+            "name": user_first_name,
+            "username": user_name
+        }
+        user_details.append(user_info)
+        save_user_details()
+
+        # Send user details to the user details channel
+        await client.send_message(USER_DETAILS_CHANNEL, 
+                                   f"New user started the bot:\nName: {user_first_name}\nUsername: {user_name}\nUser ID: {user_id}")
+
+    welcome_message = (
+        f"Hello {user_first_name} 👋!\n\n"
+        "<b>I am a simple bot to download videos, reels, and photos from Instagram links.</b>\n\n"
+        "<i>This bot is the fastest bot you have ever seen in Telegram.</i>\n\n"
+        "<b>‣ Just send me your link🔗.</b>\n\n"
+        "<b>Developer: @xdshivay</b> ❤"
+    )
     
-    print(f"Fetching video link from: {dirpy_url}")
-    print(f"Response status code: {response.status_code}")
-    
-    if response.status_code == 200:
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        video_tag = soup.find('video')
-        if video_tag and video_tag.source:
-            print(f"Video URL found: {video_tag.source['src']}")
-            return video_tag.source['src']
-        
-        for link in soup.find_all('a', href=True):
-            if 'video' in link['href']:
-                print(f"Fallback video URL found: {link['href']}")
-                return link['href']
-    
-    print("No video URL found.")
-    return None
-
-def download_video(video_link):
-    try:
-        response = requests.get(video_link, stream=True)
-        
-        print(f"Attempting to download video from: {video_link}")
-        print(f"Response status code: {response.status_code}")
-        
-        if response.status_code == 200:
-            filename_hash = hashlib.md5(video_link.encode()).hexdigest()
-            filename = f"{filename_hash}.mp4"
-
-            with open(filename, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
-
-            if os.path.exists(filename) and os.path.getsize(filename) > 0:
-                print(f"Downloaded video saved as: {filename}")
-                return filename
-            else:
-                print("Error: Video file was not created.")
-        else:
-            print(f"Failed to download video: {response.text}")
-    except Exception as e:
-        print(f"An error occurred during the download: {e}")
-    
-    return None
-
-def compress_video(input_path):
-    output_path = f"compressed_{os.path.basename(input_path)}"
-    command = [
-        'ffmpeg', '-i', input_path, '-vcodec', 'libx264', '-crf', '28', 
-        '-preset', 'fast', output_path
+    keyboard = [
+        [
+            InlineKeyboardButton("Channel", url="https://t.me/Itsteachteam"),
+            InlineKeyboardButton("Group", url="https://t.me/Itsteachteamsupport")
+        ], 
+        [
+            InlineKeyboardButton("Developer", url="https://t.me/XDSHlVAY")
+        ]
     ]
-    subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    return output_path
+    reply_markup = InlineKeyboardMarkup(keyboard)
 
-def get_file_size(file_path):
-    return os.path.getsize(file_path) / (1024 * 1024)  # Convert bytes to MB
+    await message.reply_text(welcome_message, parse_mode='HTML', reply_markup=reply_markup)
 
-async def upload_to_telegram(bot, chat_id, video_path):
+@app.on_message(filters.command("info"))
+async def info(client, message):
+    user_id = message.from_user.id
+    if user_id not in ADMIN_USER_IDS:
+        await message.reply_text("You are not authorized to use this command.")
+        return
+
+    total_users = len(user_details)
+    await message.reply_text(f"Total users in the bot: {total_users}")
+
+async def check_channel_membership(user_id):
     try:
-        print(f"Attempting to upload video: {video_path}")
-        with open(video_path, 'rb') as video_file:
-            message = await bot.send_video(chat_id=chat_id, video=video_file)
-            print("Video upload successful.")
+        chat_member = await app.get_chat_member(CHANNEL_USERNAME, user_id)
+        return chat_member.status in ["member", "administrator", "creator"]
+    except Exception:
+        return False
 
-            buttons = [
-                [
-                    InlineKeyboardButton("Download Video", callback_data='download'),
-                    InlineKeyboardButton("Visit Channel", url='https://t.me/GrabVidbot')  # Your bot's username link
-                ]
+async def download_and_send_video(video_url, chat_id, user_id):
+    if not await check_channel_membership(user_id):
+        keyboard = [
+            [
+                InlineKeyboardButton("Join Channel", url="https://t.me/Itsteachteam"),
             ]
-            reply_markup = InlineKeyboardMarkup(buttons)
-            await bot.edit_message_reply_markup(chat_id=chat_id, message_id=message.message_id, reply_markup=reply_markup)
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await app.send_message(chat_id, 
+                               "<b>Before sending the link, please join our channel first.</b>\n\n<i>After joining, send the link again.</i>",
+                               parse_mode='HTML', reply_markup=reply_markup)
+        return
 
-        os.remove(video_path)  # Delete video from server after sending
-        print("Video uploaded and deleted from server.")
-    except Exception as e:
-        print(f"Error during video upload: {e}")
-        await bot.send_message(chat_id=chat_id, text="Failed to upload the video.")
+    downloading_message = await app.send_message(chat_id, "Processing your request... Please wait.")
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Send me a video link from Instagram or other platforms!")
-
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.chat.id
-    user_url = update.message.text
-
-    dirpy_url = f"https://dirpy.com/studio?url={user_url}"
-    processing_message = await update.message.reply_text("Processing...")
-
-    video_link = get_video_link(dirpy_url)
-    if video_link:
-        video_path = download_video(video_link)
-        if video_path:
-            if get_file_size(video_path) > MAX_SIZE_MB:
-                video_path = compress_video(video_path)  # Compress the video if it's too large
-            await upload_to_telegram(context.bot, user_id, video_path)
-            await processing_message.delete()
-            await update.message.reply_text("Video uploaded successfully!")
-        else:
-            await processing_message.delete()
-            await update.message.reply_text("Failed to download the video.")
-    else:
-        await processing_message.delete()
-        await update.message.reply_text("Failed to retrieve video link.")
-
-def main():
-    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
+    api_url = f'https://tele-social.vercel.app/down?url={video_url}'
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+    }
+    
     try:
-        app.run_polling()
-    except Exception as e:
-        print(f"An error occurred: {e}")
+        async with aiohttp.ClientSession() as session:
+            async with session.get(api_url, headers=headers) as response:
+                response.raise_for_status()
+                content = await response.json()
 
-if __name__ == "__main__":
-    main()
+        platform = content.get('platform')
+        video_link = content['data'].get('video')
+        title = content['data'].get('title', "Video")  # Default title
+
+        if not video_link or not video_link.startswith("http"):
+            await app.send_message(chat_id, "Received an invalid video link.")
+            return
+
+        # Download video
+        async with aiohttp.ClientSession() as session:
+            async with session.get(video_link) as response:
+                response.raise_for_status()
+                video_data = await response.read()
+
+        # Send the video file
+        await app.send_video(chat_id, video_data, caption=title)
+
+    except Exception as e:
+        await app.send_message(chat_id, "Failed to download video. Please try again later.")
+        print(f"Error: {e}")
+    finally:
+        await app.delete_messages(chat_id, downloading_message.message_id)
+
+@app.on_message(filters.text & ~filters.command)
+async def handle_message(client, message):
+    video_link = message.text
+    await download_and_send_video(video_link, message.chat.id, message.from_user.id)
+
+@app.on_message(filters.command("broadcast"))
+async def broadcast(client, message):
+    if message.from_user.id not in ADMIN_USER_IDS:
+        await message.reply_text("You are not authorized to use this command.")
+        return
+
+    if not message.reply_to_message:
+        await message.reply_text("Please reply to a message to broadcast it.")
+        return
+
+    message_to_forward = message.reply_to_message
+    successful = 0
+    failed = 0
+
+    for user in user_details:
+        user_id = user['id']
+        try:
+            await client.forward_messages(user_id, message_to_forward.chat.id, message_to_forward.message_id)
+            successful += 1
+        except Exception as e:
+            print(f"Failed to forward message to {user_id}: {e}")
+            failed += 1
+
+    await message.reply_text(f"Broadcast complete:\n\nSuccessfully sent: {successful}\nFailed: {failed}\nTotal users: {len(user_details)}")
+
+if __name__ == '__main__':
+    app.run()
