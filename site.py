@@ -77,8 +77,10 @@ async def info(client, message):
 async def check_channel_membership(user_id):
     try:
         chat_member = await app.get_chat_member(CHANNEL_USERNAME, user_id)
+        print(f"User ID: {user_id}, Status: {chat_member.status}")  # Debug line
         return chat_member.status in ["member", "administrator", "creator"]
-    except Exception:
+    except Exception as e:
+        print(f"Error checking membership for user {user_id}: {e}")  # Debug line
         return False
 
 async def download_and_send_video(video_url, chat_id, user_id):
