@@ -1,10 +1,9 @@
 import os
 import json
 import aiohttp
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-# Replace with your actual bot token and channel usernames
 TELEGRAM_BOT_TOKEN = '6996568724:AAFrjf88-0uUXJumDiuV6CbVuXCJvT-4KbY'
 API_ID = 12834603
 API_HASH = '84a5daf7ac334a70b3fbd180616a76c6'
@@ -76,11 +75,13 @@ async def info(client, message):
 
 async def check_channel_membership(user_id):
     try:
-        chat_member = await app.get_chat_member(CHANNEL_USERNAME, user_id)
-        print(f"User ID: {user_id}, Status: {chat_member.status}")  # Debug line
-        return chat_member.status in ["member", "administrator", "creator"]
+        async for member in app.get_chat_members(CHANNEL_USERNAME):
+            if member.user.id == user_id:
+                if member.status in [enums.ChatMemberStatus.ADMINISTRATOR, enums.ChatMemberStatus.CREATOR, enums.ChatMemberStatus.MEMBER]:
+                    return True
+        return False
     except Exception as e:
-        print(f"Error checking membership for user {user_id}: {e}")  # Debug line
+        print(f"Error checking membership for user {user_id}: {e}")
         return False
 
 async def download_and_send_video(video_url, chat_id, user_id):
