@@ -5,27 +5,24 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 # Replace with your actual bot token and channel usernames
-TELEGRAM_BOT_TOKEN = '6996568724:AAFrjf88-0uUXJumDiuV6CbVuXCJvT-4KbY'  # Use an environment variable for the bot token
-API_ID = 12834603  # Your API ID
-API_HASH = '84a5daf7ac334a70b3fbd180616a76c6'  # Your API hash
-CHANNEL_USERNAME = '@itsteachteam'  # Your channel username to check membership
-USER_DETAILS_CHANNEL = '@userdatass'  # Channel to store user details
-ADMIN_USER_IDS = [6744775967]  # List of admin user IDs
-USER_DATA_FILE = "user_details.json"  # File to store user details
+TELEGRAM_BOT_TOKEN = '6996568724:AAFrjf88-0uUXJumDiuV6CbVuXCJvT-4KbY'
+API_ID = 12834603
+API_HASH = '84a5daf7ac334a70b3fbd180616a76c6'
+CHANNEL_USERNAME = '@itsteachteam'
+USER_DETAILS_CHANNEL = '@userdatass'
+ADMIN_USER_IDS = [6744775967]
+USER_DATA_FILE = "user_details.json"
 
-# Load user details from a JSON file
 try:
     with open(USER_DATA_FILE, "r") as file:
         user_details = json.load(file)
 except FileNotFoundError:
-    user_details = []  # If no file exists, initialize an empty list
+    user_details = []
 
-# Function to save user details to a JSON file
 def save_user_details():
     with open(USER_DATA_FILE, "w") as file:
         json.dump(user_details, file, indent=4)
 
-# Pyrogram client
 app = Client("my_bot", bot_token=TELEGRAM_BOT_TOKEN, api_id=API_ID, api_hash=API_HASH)
 
 @app.on_message(filters.command("start"))
@@ -34,7 +31,6 @@ async def start(client, message):
     user_first_name = message.from_user.first_name
     user_name = message.from_user.username
 
-    # Store user details if not already present
     if not any(user['id'] == user_id for user in user_details):
         user_info = {
             "id": user_id,
@@ -44,16 +40,15 @@ async def start(client, message):
         user_details.append(user_info)
         save_user_details()
 
-        # Send user details to the user details channel
         await client.send_message(USER_DETAILS_CHANNEL, 
                                    f"New user started the bot:\nName: {user_first_name}\nUsername: {user_name}\nUser ID: {user_id}")
 
     welcome_message = (
         f"Hello {user_first_name}!\n\n"
-        "*I am a simple bot to download videos, reels, and photos from Instagram links.*\n\n"
-        "*This bot is the fastest bot you have ever seen in Telegram.*\n\n"
-        "*Just send me your link.*\n\n"
-        "*Developer: @xdshivay* ❤"
+        "<b>I am a simple bot to download videos, reels, and photos from Instagram links.</b>\n\n"
+        "<b>This bot is the fastest bot you have ever seen in Telegram.</b>\n\n"
+        "<b>Just send me your link.</b>\n\n"
+        "<b>Developer: @xdshivay</b> ❤"
     )
     
     keyboard = [
@@ -67,7 +62,7 @@ async def start(client, message):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await message.reply_text(welcome_message, parse_mode='MarkdownV2', reply_markup=reply_markup)
+    await message.reply_text(welcome_message, parse_mode='HTML', reply_markup=reply_markup)
 
 @app.on_message(filters.command("info"))
 async def info(client, message):
@@ -93,8 +88,8 @@ async def download_and_send_video(video_url, chat_id, user_id):
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await app.send_message(chat_id, 
-                               "*Before sending the link, please join our channel first.*\n\n*After joining, send the link again.*",
-                               parse_mode='MarkdownV2', reply_markup=reply_markup)
+                               "<b>Before sending the link, please join our channel first.</b>\n\n<b>After joining, send the link again.</b>",
+                               parse_mode='HTML', reply_markup=reply_markup)
         return
 
     downloading_message = await app.send_message(chat_id, "Processing your request... Please wait.")
