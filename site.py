@@ -49,11 +49,11 @@ async def start(client, message):
                                    f"New user started the bot:\nName: {user_first_name}\nUsername: {user_name}\nUser ID: {user_id}")
 
     welcome_message = (
-        f"Hello {user_first_name} 👋!\n\n"
-        "<b>I am a simple bot to download videos, reels, and photos from Instagram links.</b>\n\n"
-        "<i>This bot is the fastest bot you have ever seen in Telegram.</i>\n\n"
-        "<b>‣ Just send me your link🔗.</b>\n\n"
-        "<b>Developer: @xdshivay</b> ❤"
+        f"Hello {user_first_name}!\n\n"
+        "*I am a simple bot to download videos, reels, and photos from Instagram links.*\n\n"
+        "*This bot is the fastest bot you have ever seen in Telegram.*\n\n"
+        "*Just send me your link.*\n\n"
+        "*Developer: @xdshivay* ❤"
     )
     
     keyboard = [
@@ -67,7 +67,7 @@ async def start(client, message):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await message.reply_text(welcome_message, parse_mode='HTML', reply_markup=reply_markup)
+    await message.reply_text(welcome_message, parse_mode='Markdown', reply_markup=reply_markup)
 
 @app.on_message(filters.command("info"))
 async def info(client, message):
@@ -93,8 +93,8 @@ async def download_and_send_video(video_url, chat_id, user_id):
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await app.send_message(chat_id, 
-                               "<b>Before sending the link, please join our channel first.</b>\n\n<i>After joining, send the link again.</i>",
-                               parse_mode='HTML', reply_markup=reply_markup)
+                               "*Before sending the link, please join our channel first.*\n\n*After joining, send the link again.*",
+                               parse_mode='Markdown', reply_markup=reply_markup)
         return
 
     downloading_message = await app.send_message(chat_id, "Processing your request... Please wait.")
