@@ -27,7 +27,7 @@ ALLOWED_PLATFORMS = [
 # Initialize an empty list to store user IDs
 users = []
 total_downloads = 0  # Counter for total video downloads
-ADMIN_ID = int(os.environ.get('ADMIN_ID'))  # Use environment variable for security
+ADMIN_ID = 6744775967  # Use environment variable for security
 
 async def is_user_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.chat.id
