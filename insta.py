@@ -7,7 +7,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
 # Replace with your actual Telegram bot token and channel username
-TELEGRAM_TOKEN = '7744770326:AAE9OtBsE0QyzPURjV4bt6gU4H6CBn9mvFc'  # Replace with your bot token
+TELEGRAM_TOKEN = '6996568724:AAFrjf88-0uUXJumDiuV6CbVuXCJvT-4KbY'  # Replace with your bot token
 CHANNEL_USERNAME = '@itsteachteam'  # Replace with your channel username
 MAX_SIZE_MB = 100  # Set your maximum size limit in MB
 
@@ -40,7 +40,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.chat.id
     if user_id not in users:
         users.append(user_id)  # Add user to the list        
-   # Create inline buttons
+    # Create inline buttons
     keyboard = [
         [
             InlineKeyboardButton("Channel", url=f'https://t.me/itsteachteam'),
@@ -53,14 +53,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "I am a simple bot to download videos, reels, and photos from Instagram links.\n\n"
         "This bot is the fastest bot you have ever seen in Telegram.\n\n"
         "‣ Just send me your link🔗.\n\n"
-        "Developer: @xdshivay ❤",reply_markup=reply_markup)
-   
-#await update.message.reply_text("Welcome! Please join our channels.", reply_markup=reply_markup)
+        "Developer: @xdshivay ❤", reply_markup=reply_markup)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global total_downloads  # Use global variable to track downloads
     user_id = update.message.chat.id
     user_url = update.message.text
+
+    print(f"Received URL: {user_url}")  # Log the received URL
 
     if not await is_user_member(update, context):
         await update.message.reply_text(
@@ -73,6 +73,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     dirpy_url = f"https://dirpy.com/studio?url={user_url}"
+    print(f"Fetching video link from: {dirpy_url}")  # Log the Dirpy URL
     processing_message = await update.message.reply_text("Processing...")
 
     video_link = get_video_link(dirpy_url)
@@ -116,7 +117,7 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 failed += 1
         
         total_users = len(user_ids)
-        await update.message.reply_text(f"Broadcast complete: \n\nsuccesfully:{successful}\n\nFailed:{failed}\n\nTotal users:{total_users}")
+        await update.message.reply_text(f"Broadcast complete: \n\nSuccessfully: {successful}\nFailed: {failed}\nTotal users: {total_users}")
     else:
         await update.message.reply_text("Please reply to a message to broadcast it.")
 
@@ -138,6 +139,7 @@ def get_video_link(dirpy_url):
     return None
 
 def download_video(video_link):
+    print(f"Downloading video from: {video_link}")  # Log the video link
     try:
         response = requests.get(video_link, stream=True)
         if response.status_code == 200:
@@ -148,10 +150,12 @@ def download_video(video_link):
                     f.write(chunk)
 
             if os.path.exists(filename) and os.path.getsize(filename) > 0:
+                print(f"Successfully downloaded video: {video_link}")  # Log success
                 return filename
     except Exception as e:
         print(f"An error occurred during the download: {e}")
     
+    print(f"Failed to download video: {video_link}")  # Log failure
     return None
 
 def compress_video(input_path):
