@@ -11,7 +11,7 @@ logger = logging.getLogger()
 
 # Replace with your actual Telegram bot token and channel username
 TELEGRAM_TOKEN = '6996568724:AAFrjf88-0uUXJumDiuV6CbVuXCJvT-4KbY'  # Replace with your bot token
-CHANNEL_USERNAME = '@your_channel_username'  # Replace with your channel username
+CHANNEL_USERNAME = '@itsteachteam'  # Replace with your channel username
 MAX_SIZE_MB = 100  # Set your maximum size limit in MB
 
 ALLOWED_PLATFORMS = [
