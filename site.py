@@ -1,12 +1,11 @@
 import requests
-from bs4 import BeautifulSoup
 import os
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
-# Configure logging to capture only error messages
-logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger()
 
 # Replace with your actual Telegram bot token and channel username
@@ -89,18 +88,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Failed to retrieve video link.")
 
 def get_video_link(url):
-    # Example implementation: Modify this according to the actual website you are scraping.
-    # This is a placeholder for extracting the video link from the given URL.
-    # Here, you would implement your scraping logic.
+    # Placeholder for extracting the video link from the given URL
     return "http://example.com/video.mp4"  # Replace with actual video URL extraction logic
 
 def download_video(video_url):
     try:
         response = requests.get(video_url, stream=True)
-        filename = video_url.split("/")[-1]  # Use the last part of the URL as filename
+        filename = video_url.split("/")[-1]  # Use the last part of the URL as the filename
+
+        # Save the video to a file
         with open(filename, "wb") as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
+
+        logger.info(f"Downloaded video: {filename} (size: {os.path.getsize(filename)} bytes)")
+        print(f"Downloaded video saved at: {os.path.abspath(filename)}")  # Print the full path
         return filename
     except Exception as e:
         logger.error(f"Error downloading video: {e}")
@@ -112,7 +114,7 @@ def get_file_size(file_path):
 def compress_video(video_path):
     # Placeholder for video compression logic
     # This should return the path of the compressed video
-    return video_path  # Replace with actual compression logic
+    return video_path  # Replace with actual compression logic if needed
 
 async def upload_to_telegram(bot, user_id, video_path):
     try:
@@ -157,7 +159,7 @@ def main():
     app.add_handler(CommandHandler("broadcast", broadcast))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    logger.error("Bot started and polling...")
+    logger.info("Bot started and polling...")
     app.run_polling()
 
 if __name__ == "__main__":
