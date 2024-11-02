@@ -6,6 +6,7 @@ import subprocess
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+import time
 
 # Replace with your actual Telegram bot token and channel username
 TELEGRAM_TOKEN = '6996568724:AAFrjf88-0uUXJumDiuV6CbVuXCJvT-4KbY'  # Replace with your bot token
@@ -26,7 +27,6 @@ users = []
 total_downloads = 0  # Counter for total video downloads
 ADMIN_ID = 6744775967  # Replace with your actual Telegram user ID
 
-# Set up logging
 logging.basicConfig(level=logging.INFO)
 
 async def is_user_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -54,9 +54,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
         f"Hello {update.message.from_user.first_name}!\n\n"
-        "I am a bot to download videos, reels, and photos from links.\n\n"
-        "Just send me your link!",
-        reply_markup=reply_markup)
+        "I am a simple bot to download videos, reels, and photos from Instagram links.\n\n"
+        "This bot is the fastest bot you have ever seen in Telegram.\n\n"
+        "‣ Just send me your link.\n\n"
+        "Developer: @xdshivay", reply_markup=reply_markup)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global total_downloads
@@ -66,9 +67,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logging.info(f"Received URL: {user_url}")
 
     if not await is_user_member(update, context):
-        await update.message.reply_text(
-            f"Please join our channel {CHANNEL_USERNAME} to use this bot."
-        )
+        await update.message.reply_text(f"Please join our channel {CHANNEL_USERNAME} to use this bot.")
         return
 
     if not is_supported_platform(user_url):
@@ -102,11 +101,10 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if update.message.reply_to_message:
         message_to_forward = update.message.reply_to_message
-        user_ids = users
         successful = 0
         failed = 0
-        
-        for user_id in user_ids:
+
+        for user_id in users:
             try:
                 await context.bot.forward_message(chat_id=user_id, from_chat_id=message_to_forward.chat.id, message_id=message_to_forward.message_id)
                 successful += 1
@@ -114,8 +112,8 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logging.error(f"Failed to forward message to {user_id}: {e}")
                 failed += 1
         
-        total_users = len(user_ids)
-        await update.message.reply_text(f"Broadcast complete: \n\nSuccessfully: {successful}\nFailed: {failed}\nTotal users: {total_users}")
+        total_users = len(users)
+        await update.message.reply_text(f"Broadcast complete:\n\nSuccessfully: {successful}\nFailed: {failed}\nTotal users: {total_users}")
     else:
         await update.message.reply_text("Please reply to a message to broadcast it.")
 
@@ -138,30 +136,36 @@ def get_video_link(dirpy_url):
 
 def download_video(video_link):
     logging.info(f"Downloading video from: {video_link}")
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
-        }
-        response = requests.get(video_link, headers=headers, stream=True)
-        logging.info(f"Response Status Code: {response.status_code}")
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+    }
 
-        if response.status_code == 200:
-            filename_hash = hashlib.md5(video_link.encode()).hexdigest()
-            filename = f"{filename_hash}.mp4"
-            with open(filename, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
+    for attempt in range(3):  # Retry up to 3 times
+        try:
+            response = requests.get(video_link, headers=headers, stream=True)
+            logging.info(f"Response Status Code: {response.status_code}")
 
-            if os.path.exists(filename) and os.path.getsize(filename) > 0:
-                logging.info(f"Successfully downloaded video: {video_link}")
-                return filename
-        else:
-            logging.error(f"Download failed with status code: {response.status_code}")
-            logging.error(f"Response content: {response.text[:500]}")  # Log first 500 chars of response
+            if response.status_code == 200:
+                filename_hash = hashlib.md5(video_link.encode()).hexdigest()
+                filename = f"{filename_hash}.mp4"
+                with open(filename, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
 
-    except Exception as e:
-        logging.error(f"An error occurred during the download: {e}")
+                if os.path.exists(filename) and os.path.getsize(filename) > 0:
+                    logging.info(f"Successfully downloaded video: {video_link}")
+                    return filename
+            elif response.status_code == 403:
+                logging.error("Access forbidden (403). Check the URL or your permissions.")
+                break
+            else:
+                logging.error(f"Download failed with status code: {response.status_code}")
+        
+        except Exception as e:
+            logging.error(f"An error occurred during the download: {e}")
 
+        time.sleep(2 ** attempt)  # Exponential backoff
+    
     logging.error(f"Failed to download video: {video_link}")
     return None
 
@@ -185,7 +189,7 @@ async def upload_to_telegram(bot, chat_id, video_path):
             buttons = [
                 [
                     InlineKeyboardButton("Channel", url=f'https://t.me/itsteachteam'),
-                    InlineKeyboardButton("Bot", url=f'https://t.me/{bot.username}')  # Replace with your bot's username
+                    InlineKeyboardButton("Bot", url=f'https://t.me/{bot.username}')
                 ]
             ]
             reply_markup = InlineKeyboardMarkup(buttons)
