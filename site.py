@@ -25,7 +25,7 @@ ALLOWED_PLATFORMS = [
 
 users = []
 total_downloads = 0
-ADMIN_ID = YOUR_ADMIN_ID  # Replace with your actual Telegram user ID
+ADMIN_ID = 6744775967  # Replace with your actual Telegram user ID
 
 async def is_user_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.chat.id
