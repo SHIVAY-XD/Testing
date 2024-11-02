@@ -97,14 +97,41 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     total_users = len(users)
     await update.message.reply_text(f"Total Users: {total_users}\nTotal Downloads: {total_downloads}")
 
-# Additional functions remain unchanged...
+async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Check if the user is the admin
+    if update.message.chat.id != ADMIN_ID:
+        await update.message.reply_text("You are not authorized to use this command.")
+        return
+
+    # Check if the command was a reply to another message
+    if update.message.reply_to_message:
+        message_to_forward = update.message.reply_to_message
+        
+        # Get the list of users to broadcast to
+        user_ids = users
+        
+        successful = 0
+        failed = 0
+        
+        for user_id in user_ids:
+            try:
+                await context.bot.forward_message(chat_id=user_id, from_chat_id=message_to_forward.chat.id, message_id=message_to_forward.message_id)
+                successful += 1
+            except Exception as e:
+                logger.error(f"Failed to forward message to {user_id}: {e}")
+                failed += 1
+        
+        total_users = len(user_ids)
+        await update.message.reply_text(f"Broadcast complete: \n\nSuccessfully sent: {successful}\nFailed: {failed}\nTotal users: {total_users}")
+    else:
+        await update.message.reply_text("Please reply to a message to broadcast it.")
 
 def main():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("stats", stats))  # Ensure stats function is defined
-    app.add_handler(CommandHandler("broadcast", broadcast))
+    app.add_handler(CommandHandler("stats", stats))
+    app.add_handler(CommandHandler("broadcast", broadcast))  # Ensure broadcast function is defined
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     logger.error("Bot started and polling...")
