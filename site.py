@@ -93,13 +93,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await processing_message.delete()
         await update.message.reply_text("Failed to retrieve video link.")
 
+async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    total_users = len(users)
+    await update.message.reply_text(f"Total Users: {total_users}\nTotal Downloads: {total_downloads}")
+
 # Additional functions remain unchanged...
 
 def main():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("stats", stats))
+    app.add_handler(CommandHandler("stats", stats))  # Ensure stats function is defined
     app.add_handler(CommandHandler("broadcast", broadcast))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
