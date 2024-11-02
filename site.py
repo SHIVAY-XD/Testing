@@ -1,17 +1,14 @@
+import requests
+from bs4 import BeautifulSoup
 import os
 import hashlib
-import logging
 import subprocess
-import aiohttp
-from bs4 import BeautifulSoup
+import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-
 # Replace with your actual Telegram bot token and channel username
-TELEGRAM_TOKEN = '6996568724:AAFrjf88-0uUXJumDiuV6CbVuXCJvT-4KbY'  # Use environment variable for security
+TELEGRAM_TOKEN = '6996568724:AAFrjf88-0uUXJumDiuV6CbVuXCJvT-4KbY'  # Replace with your bot token
 CHANNEL_USERNAME = '@itsteachteam'  # Replace with your channel username
 MAX_SIZE_MB = 100  # Set your maximum size limit in MB
 
@@ -27,7 +24,10 @@ ALLOWED_PLATFORMS = [
 # Initialize an empty list to store user IDs
 users = []
 total_downloads = 0  # Counter for total video downloads
-ADMIN_ID = 6744775967  # Use environment variable for security
+ADMIN_ID = 6744775967  # Replace with your actual Telegram user ID
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
 
 async def is_user_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.chat.id
@@ -43,31 +43,32 @@ def is_supported_platform(url):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.chat.id
     if user_id not in users:
-        users.append(user_id)  # Add user to the list
+        users.append(user_id)  # Add user to the list        
     # Create inline buttons
     keyboard = [
         [
-            InlineKeyboardButton("Channel", url='https://t.me/itsteachteam'),
-            InlineKeyboardButton("Group", url='https://t.me/itsteachteamsupport')
+            InlineKeyboardButton("Channel", url=f'https://t.me/itsteachteam'),
+            InlineKeyboardButton("Group", url=f'https://t.me/itsteachteamsupport')
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
         f"Hello {update.message.from_user.first_name}!\n\n"
-        "I am a simple bot to download videos, reels, and photos from Instagram links.\n\n"
-        "Just send me your link.",
-        reply_markup=reply_markup
-    )
+        "I am a bot to download videos, reels, and photos from links.\n\n"
+        "Just send me your link!",
+        reply_markup=reply_markup)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    global total_downloads  # Use global variable to track downloads
+    global total_downloads
     user_id = update.message.chat.id
     user_url = update.message.text
 
     logging.info(f"Received URL: {user_url}")
 
     if not await is_user_member(update, context):
-        await update.message.reply_text(f"Please join our channel {CHANNEL_USERNAME} to use this bot.")
+        await update.message.reply_text(
+            f"Please join our channel {CHANNEL_USERNAME} to use this bot."
+        )
         return
 
     if not is_supported_platform(user_url):
@@ -78,14 +79,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logging.info(f"Fetching video link from: {dirpy_url}")
     processing_message = await update.message.reply_text("Processing...")
 
-    video_link = await get_video_link(dirpy_url)
+    video_link = get_video_link(dirpy_url)
     if video_link:
         video_path = download_video(video_link)
         if video_path:
             if get_file_size(video_path) > MAX_SIZE_MB:
                 video_path = compress_video(video_path)
             await upload_to_telegram(context.bot, user_id, video_path)
-            total_downloads += 1  # Increment download count
+            total_downloads += 1
             await processing_message.delete()
         else:
             await processing_message.delete()
@@ -101,11 +102,11 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if update.message.reply_to_message:
         message_to_forward = update.message.reply_to_message
-        
+        user_ids = users
         successful = 0
         failed = 0
         
-        for user_id in users:
+        for user_id in user_ids:
             try:
                 await context.bot.forward_message(chat_id=user_id, from_chat_id=message_to_forward.chat.id, message_id=message_to_forward.message_id)
                 successful += 1
@@ -113,7 +114,7 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logging.error(f"Failed to forward message to {user_id}: {e}")
                 failed += 1
         
-        total_users = len(users)
+        total_users = len(user_ids)
         await update.message.reply_text(f"Broadcast complete: \n\nSuccessfully: {successful}\nFailed: {failed}\nTotal users: {total_users}")
     else:
         await update.message.reply_text("Please reply to a message to broadcast it.")
@@ -122,19 +123,17 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     total_users = len(users)
     await update.message.reply_text(f"Total Users: {total_users}\nTotal Downloads: {total_downloads}")
 
-async def get_video_link(dirpy_url):
-    async with aiohttp.ClientSession() as session:
-        async with session.get(dirpy_url) as response:
-            if response.status == 200:
-                soup = BeautifulSoup(await response.text(), 'html.parser')
-                video_tag = soup.find('video')
-                if video_tag and video_tag.source:
-                    return video_tag.source['src']
-                
-                for link in soup.find_all('a', href=True):
-                    if 'video' in link['href']:
-                        return link['href']
-    logging.error("Failed to retrieve video link.")
+def get_video_link(dirpy_url):
+    response = requests.get(dirpy_url)
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.text, 'html.parser')
+        video_tag = soup.find('video')
+        if video_tag and video_tag.source:
+            return video_tag.source['src']
+        
+        for link in soup.find_all('a', href=True):
+            if 'video' in link['href']:
+                return link['href']
     return None
 
 def download_video(video_link):
@@ -144,6 +143,8 @@ def download_video(video_link):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
         }
         response = requests.get(video_link, headers=headers, stream=True)
+        logging.info(f"Response Status Code: {response.status_code}")
+
         if response.status_code == 200:
             filename_hash = hashlib.md5(video_link.encode()).hexdigest()
             filename = f"{filename_hash}.mp4"
@@ -156,6 +157,8 @@ def download_video(video_link):
                 return filename
         else:
             logging.error(f"Download failed with status code: {response.status_code}")
+            logging.error(f"Response content: {response.text[:500]}")  # Log first 500 chars of response
+
     except Exception as e:
         logging.error(f"An error occurred during the download: {e}")
 
@@ -179,10 +182,9 @@ async def upload_to_telegram(bot, chat_id, video_path):
         with open(video_path, 'rb') as video_file:
             message = await bot.send_video(chat_id=chat_id, video=video_file)
 
-            # Create inline buttons for the channel and bot
             buttons = [
                 [
-                    InlineKeyboardButton("Channel", url='https://t.me/itsteachteam'),
+                    InlineKeyboardButton("Channel", url=f'https://t.me/itsteachteam'),
                     InlineKeyboardButton("Bot", url=f'https://t.me/{bot.username}')  # Replace with your bot's username
                 ]
             ]
@@ -198,8 +200,8 @@ def main():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("stats", stats))  # Command to check stats
-    app.add_handler(CommandHandler("broadcast", broadcast))  # Combined broadcast command
+    app.add_handler(CommandHandler("stats", stats))
+    app.add_handler(CommandHandler("broadcast", broadcast))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     app.run_polling()
