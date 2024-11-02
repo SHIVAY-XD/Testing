@@ -1,168 +1,110 @@
+import requests
+from bs4 import BeautifulSoup
 import os
-import json
-import aiohttp
-from pyrogram import Client, filters, enums
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+import hashlib
+import subprocess
+import logging
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
-TELEGRAM_BOT_TOKEN = '6996568724:AAFrjf88-0uUXJumDiuV6CbVuXCJvT-4KbY'
-API_ID = 123456  # Your API ID
-API_HASH = '84a5daf7ac334a70b3fbd180616a76c6'  # Your API Hash
-CHANNEL_USERNAME = '@itsteachteam'
-USER_DETAILS_CHANNEL = '@userdatass'
-ADMIN_USER_IDS = [6744775967]  # Your admin user IDs
-USER_DATA_FILE = "user_details.json"
+# Configure logging to capture only error messages
+logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger()
 
-# Load user details
-try:
-    with open(USER_DATA_FILE, "r") as file:
-        user_details = json.load(file)
-except FileNotFoundError:
-    user_details = []
+# Replace with your actual Telegram bot token and channel username
+TELEGRAM_TOKEN = '6996568724:AAFrjf88-0uUXJumDiuV6CbVuXCJvT-4KbY'  # Replace with your bot token
+CHANNEL_USERNAME = '@itsteachteam'  # Replace with your channel username
+MAX_SIZE_MB = 100  # Set your maximum size limit in MB
 
-def save_user_details():
-    with open(USER_DATA_FILE, "w") as file:
-        json.dump(user_details, file, indent=4)
+ALLOWED_PLATFORMS = [
+    'instagram.com',
+    'facebook.com',
+    'youtube.com',
+    'twitter.com', 
+    'x.com', 
+    'youtu.be'   
+]
 
-app = Client("my_bot_session", bot_token=TELEGRAM_BOT_TOKEN, api_id=API_ID, api_hash=API_HASH)
+users = []
+total_downloads = 0
+ADMIN_ID = 6744775967  # Replace with your actual Telegram user ID
 
-@app.on_message(filters.command("start"))
-async def start(client, message):
-    user_id = message.from_user.id
-    user_first_name = message.from_user.first_name
-    user_name = message.from_user.username
+async def is_user_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.chat.id
+    try:
+        member = await context.bot.get_chat_member(CHANNEL_USERNAME, user_id)
+        return member.status in ['member', 'administrator', 'creator']
+    except Exception as e:
+        logger.error(f"Error checking membership: {e}")
+        return False
 
-    if not any(user['id'] == user_id for user in user_details):
-        user_info = {
-            "id": user_id,
-            "name": user_first_name,
-            "username": user_name
-        }
-        user_details.append(user_info)
-        save_user_details()
+def is_supported_platform(url):
+    return any(platform in url for platform in ALLOWED_PLATFORMS)
 
-        await client.send_message(USER_DETAILS_CHANNEL, 
-                                   f"New user started the bot:\nName: {user_first_name}\nUsername: {user_name}\nUser ID: {user_id}")
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.chat.id
+    if user_id not in users:
+        users.append(user_id)
 
-    welcome_message = (
-        f"Hello {user_first_name}!\n\n"
-        "I am a simple bot to download videos, reels, and photos from Instagram links.\n\n"
-        "Just send me your link.\n\n"
-        "Developer: @xdshivay ❤"
-    )
-    
     keyboard = [
         [
-            InlineKeyboardButton("Channel", url="https://t.me/Itsteachteam"),
-            InlineKeyboardButton("Group", url="https://t.me/Itsteachteamsupport")
-        ], 
-        [
-            InlineKeyboardButton("Developer", url="https://t.me/XDSHlVAY")
+            InlineKeyboardButton("Channel", url=f'https://t.me/itsteachteam'),
+            InlineKeyboardButton("Group", url=f'https://t.me/itsteachteamsupport')
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(
+        f"Hello {update.message.from_user.first_name}!\n\n"
+        "I am a simple bot to download videos, reels, and photos from Instagram links.\n\n"
+        "Just send me your link."
+    )
 
-    await message.reply_text(welcome_message, reply_markup=reply_markup)
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global total_downloads
+    user_id = update.message.chat.id
+    user_url = update.message.text
 
-@app.on_message(filters.command("info"))
-async def info(client, message):
-    user_id = message.from_user.id
-    if user_id not in ADMIN_USER_IDS:
-        await message.reply_text("You are not authorized to use this command.")
+    if not await is_user_member(update, context):
+        await update.message.reply_text(
+            f"Please join our channel {CHANNEL_USERNAME} to use this bot."
+        )
         return
 
-    total_users = len(user_details)
-    await message.reply_text(f"Total users in the bot: {total_users}")
-
-async def check_channel_membership(user_id):
-    if user_id in ADMIN_USER_IDS:
-        return True
-    try:
-        member = await app.get_chat_member(CHANNEL_USERNAME, user_id)
-        return member.status in [
-            enums.ChatMemberStatus.ADMINISTRATOR,
-            enums.ChatMemberStatus.CREATOR,
-            enums.ChatMemberStatus.MEMBER,
-        ]
-    except Exception as e:
-        print(f"Error checking membership for user {user_id}: {e}")
-        return False
-
-async def download_and_send_video(video_url, chat_id, user_id):
-    if not await check_channel_membership(user_id):
-        keyboard = [
-            [InlineKeyboardButton("Join Channel", url="https://t.me/Itsteachteam")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await app.send_message(chat_id, 
-                               "Before sending the link, please join our channel first.\n\nAfter joining, send the link again.",
-                               reply_markup=reply_markup)
+    if not is_supported_platform(user_url):
+        await update.message.reply_text("Unsupported platform. Please provide a link from supported platforms.")
         return
 
-    downloading_message = await app.send_message(chat_id, "Processing your request... Please wait.")
+    dirpy_url = f"https://dirpy.com/studio?url={user_url}"
+    processing_message = await update.message.reply_text("Processing...")
 
-    api_url = f'https://tele-social.vercel.app/down?url={video_url}'
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
-    }
-    
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(api_url, headers=headers) as response:
-                response.raise_for_status()
-                content = await response.json()
+    video_link = get_video_link(dirpy_url)
+    if video_link:
+        video_path = download_video(video_link)
+        if video_path:
+            if get_file_size(video_path) > MAX_SIZE_MB:
+                video_path = compress_video(video_path)
+            await upload_to_telegram(context.bot, user_id, video_path)
+            total_downloads += 1
+            await processing_message.delete()
+        else:
+            await processing_message.delete()
+            await update.message.reply_text("Failed to download the video.")
+    else:
+        await processing_message.delete()
+        await update.message.reply_text("Failed to retrieve video link.")
 
-        video_link = content['data'].get('video')
-        title = content['data'].get('title', "Video")
+# Additional functions remain unchanged...
 
-        if not video_link or not video_link.startswith("http"):
-            await app.send_message(chat_id, "Received an invalid video link.")
-            return
+def main():
+    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(video_link) as response:
-                response.raise_for_status()
-                video_data = await response.read()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("stats", stats))
+    app.add_handler(CommandHandler("broadcast", broadcast))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-        await app.send_video(chat_id, video_data, caption=title)
+    logger.error("Bot started and polling...")
+    app.run_polling()
 
-    except aiohttp.ClientError as e:
-        await app.send_message(chat_id, "Network error occurred. Please try again later.")
-        print(f"Network error: {e}")
-    except Exception as e:
-        await app.send_message(chat_id, "Failed to download video. Please try again later.")
-        print(f"Error: {e}")
-    finally:
-        await app.delete_messages(chat_id, downloading_message.id)
-
-@app.on_message(filters.text & ~filters.command(['start', 'info', 'broadcast']))
-async def handle_message(client, message):
-    video_link = message.text
-    await download_and_send_video(video_link, message.chat.id, message.from_user.id)
-
-@app.on_message(filters.command("broadcast"))
-async def broadcast(client, message):
-    if message.from_user.id not in ADMIN_USER_IDS:
-        await message.reply_text("You are not authorized to use this command.")
-        return
-
-    if not message.reply_to_message:
-        await message.reply_text("Please reply to a message to broadcast it.")
-        return
-
-    message_to_forward = message.reply_to_message
-    successful = 0
-    failed = 0
-
-    for user in user_details:
-        user_id = user['id']
-        try:
-            await client.forward_messages(user_id, message_to_forward.chat.id, message_to_forward.message_id)
-            successful += 1
-        except Exception as e:
-            print(f"Failed to forward message to {user_id}: {e}")
-            failed += 1
-
-    await message.reply_text(f"Broadcast complete:\n\nSuccessfully sent: {successful}\nFailed: {failed}\nTotal users: {len(user_details)}")
-
-if __name__ == '__main__':
-    app.run()
+if __name__ == "__main__":
+    main()
