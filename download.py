@@ -8,7 +8,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, fil
 import aiohttp
 
 # Replace with your actual Telegram bot token and channel username
-TELEGRAM_TOKEN = '6996568724:AAFrjf88-0uUXJumDiuV6CbVuXCJvT-4KbY'  # Replace with your bot token
+TELEGRAM_TOKEN = '7744770326:AAE9OtBsE0QyzPURjV4bt6gU4H6CBn9mvFc'  # Replace with your bot token
 CHANNEL_USERNAME = '@itsteachteam'  # Replace with your channel username
 MAX_SIZE_MB = 100  # Set your maximum size limit in MB
 
