@@ -1,18 +1,16 @@
-import json
+import requests
+from bs4 import BeautifulSoup
 import os
 import hashlib
 import subprocess
-import aiohttp
-from bs4 import BeautifulSoup
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+import aiohttp
 
 # Replace with your actual Telegram bot token and channel username
 TELEGRAM_TOKEN = '7744770326:AAE9OtBsE0QyzPURjV4bt6gU4H6CBn9mvFc'  # Replace with your bot token
 CHANNEL_USERNAME = '@itsteachteam'  # Replace with your channel username
 MAX_SIZE_MB = 100  # Set your maximum size limit in MB
-ADMIN_ID = 6744775967  # Replace with your actual Telegram user ID
-USER_DATA_FILE = 'user_data.json'
 
 ALLOWED_PLATFORMS = [
     'instagram.com',
@@ -20,24 +18,13 @@ ALLOWED_PLATFORMS = [
     'youtube.com',
     'twitter.com', 
     'x.com', 
-    'youtu.be'
+    'youtu.be'   
 ]
 
-# Load user IDs from the JSON file
-def load_user_ids():
-    if os.path.exists(USER_DATA_FILE):
-        with open(USER_DATA_FILE, 'r') as f:
-            return json.load(f)
-    return []
-
-# Save user IDs to the JSON file
-def save_user_ids(user_ids):
-    with open(USER_DATA_FILE, 'w') as f:
-        json.dump(user_ids, f)
-
-# Initialize user list from file
-users = load_user_ids()
+# Initialize an empty list to store user IDs
+users = []
 total_downloads = 0  # Counter for total video downloads
+ADMIN_ID = 6744775967  # Replace with your actual Telegram user ID
 
 async def is_user_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.chat.id
@@ -53,9 +40,8 @@ def is_supported_platform(url):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.chat.id
     if user_id not in users:
-        users.append(user_id)
-        save_user_ids(users)  # Save updated user list
-
+        users.append(user_id)  # Add user to the list        
+    # Create inline buttons
     keyboard = [
         [
             InlineKeyboardButton("Channel", url=f'https://t.me/itsteachteam'),
@@ -64,18 +50,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        f"Hello {update.message.from_user.first_name} 👋!\n\n"
-        "<b>I am a simple bot to download videos, reels, and photos from Instagram links.</b>\n\n"
-        "<i>This bot is the fastest bot you have ever seen in Telegram.</i>\n\n"
-        "<b>‣ Just send me your link🔗.</b>\n\n"
-        "<b>Developer: @xdshivay</b> ❤", 
-        reply_markup=reply_markup, parse_mode='HTML'
-    )
+        f"Hello {update.message.from_user.first_name}👋!\n\n"
+        "I am a simple bot to download videos, reels, and photos from Instagram links.\n\n"
+        "This bot is the fastest bot you have ever seen in Telegram.\n\n"
+        "‣ Just send me your link🔗.\n\n"
+        "Developer: @xdshivay ❤", reply_markup=reply_markup)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global total_downloads  # Use global variable to track downloads
     user_id = update.message.chat.id
     user_url = update.message.text
+
+    print(f"Received URL: {user_url}")  # Log the received URL
 
     if not await is_user_member(update, context):
         await update.message.reply_text(
@@ -88,17 +74,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     dirpy_url = f"https://dirpy.com/studio?url={user_url}"
+    print(f"Fetching video link from: {dirpy_url}")  # Log the Dirpy URL
     processing_message = await update.message.reply_text("Processing...")
 
     video_link = await get_video_link(dirpy_url)
     if video_link:
-        video_path = await download_video(video_link)
+        video_path = download_video(video_link)
         if video_path:
             if get_file_size(video_path) > MAX_SIZE_MB:
                 video_path = compress_video(video_path)
             await upload_to_telegram(context.bot, user_id, video_path)
             total_downloads += 1  # Increment download count
-            await processing_message.delete()
+            await processing_message.delete()           
         else:
             await processing_message.delete()
             await update.message.reply_text("Failed to download the video.")
@@ -107,17 +94,22 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Failed to retrieve video link.")
 
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Check if the user is the admin
     if update.message.chat.id != ADMIN_ID:
         await update.message.reply_text("You are not authorized to use this command.")
         return
 
+    # Check if the command was a reply to another message
     if update.message.reply_to_message:
         message_to_forward = update.message.reply_to_message
+        
+        # Get the list of users to broadcast to
+        user_ids = users
         
         successful = 0
         failed = 0
         
-        for user_id in users:
+        for user_id in user_ids:
             try:
                 await context.bot.forward_message(chat_id=user_id, from_chat_id=message_to_forward.chat.id, message_id=message_to_forward.message_id)
                 successful += 1
@@ -125,7 +117,7 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 print(f"Failed to forward message to {user_id}: {e}")
                 failed += 1
         
-        total_users = len(users)
+        total_users = len(user_ids)
         await update.message.reply_text(f"Broadcast complete: \n\nSuccessfully: {successful}\nFailed: {failed}\nTotal users: {total_users}")
     else:
         await update.message.reply_text("Please reply to a message to broadcast it.")
@@ -138,32 +130,39 @@ async def get_video_link(dirpy_url):
     async with aiohttp.ClientSession() as session:
         async with session.get(dirpy_url) as response:
             if response.status == 200:
-                soup = BeautifulSoup(await response.text(), 'html.parser')
+                content = await response.text()
+                print("Fetched content from Dirpy:\n", content)  # Log the fetched content
+                
+                soup = BeautifulSoup(content, 'html.parser')
                 video_tag = soup.find('video')
                 if video_tag and video_tag.source:
+                    print("Video link found in <video> tag.")
                     return video_tag.source['src']
-                
+
                 for link in soup.find_all('a', href=True):
                     if 'video' in link['href']:
+                        print("Video link found in <a> tag:", link['href'])
                         return link['href']
     return None
 
-async def download_video(video_link):
+def download_video(video_link):
+    print(f"Downloading video from: {video_link}")  # Log the video link
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(video_link) as response:
-                if response.status == 200:
-                    filename_hash = hashlib.md5(video_link.encode()).hexdigest()
-                    filename = f"{filename_hash}.mp4"
-                    with open(filename, 'wb') as f:
-                        while True:
-                            chunk = await response.content.read(8192)
-                            if not chunk:
-                                break
-                            f.write(chunk)
-                    return filename
+        response = requests.get(video_link, stream=True)
+        if response.status_code == 200:
+            filename_hash = hashlib.md5(video_link.encode()).hexdigest()
+            filename = f"{filename_hash}.mp4"
+            with open(filename, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
+            if os.path.exists(filename) and os.path.getsize(filename) > 0:
+                print(f"Successfully downloaded video: {video_link}")  # Log success
+                return filename
     except Exception as e:
         print(f"An error occurred during the download: {e}")
+    
+    print(f"Failed to download video: {video_link}")  # Log failure
     return None
 
 def compress_video(input_path):
@@ -183,10 +182,11 @@ async def upload_to_telegram(bot, chat_id, video_path):
         with open(video_path, 'rb') as video_file:
             message = await bot.send_video(chat_id=chat_id, video=video_file)
 
+            # Create inline buttons for the channel and bot
             buttons = [
                 [
                     InlineKeyboardButton("Channel", url=f'https://t.me/itsteachteam'),
-                    InlineKeyboardButton("Bot", url=f'https://t.me/{bot.username}')
+                    InlineKeyboardButton("Bot", url=f'https://t.me/{bot.username}')  # Replace with your bot's username
                 ]
             ]
             reply_markup = InlineKeyboardMarkup(buttons)
@@ -201,8 +201,8 @@ def main():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("info", stats))
-    app.add_handler(CommandHandler("broadcast", broadcast))
+    app.add_handler(CommandHandler("stats", stats))  # Command to check stats
+    app.add_handler(CommandHandler("broadcast", broadcast))  # Combined broadcast command
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     app.run_polling()
